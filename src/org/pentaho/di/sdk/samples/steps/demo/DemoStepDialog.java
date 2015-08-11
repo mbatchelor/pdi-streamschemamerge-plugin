@@ -23,12 +23,8 @@
 package org.pentaho.di.sdk.samples.steps.demo;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.ShellAdapter;
-import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.custom.CCombo;
+import org.eclipse.swt.events.*;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
@@ -42,9 +38,16 @@ import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.ui.core.widget.ColumnInfo;
+import org.pentaho.di.ui.core.widget.TableView;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableItem;
+
+import java.util.List;
 
 /**
  * This class is part of the demo step plug-in implementation.
@@ -77,6 +80,15 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 
 	// text field holding the name of the field to add to the row stream
 	private Text wHelloFieldName;
+
+    private String[] previousSteps;
+
+    private CCombo wStep;
+    private Label wlStep;
+    private FormData fdlStep, fdStep;
+    private Label wlFields;
+    private TableView wFields;
+    private FormData fdlFields, fdFields;
 
 	/**
 	 * The constructor should simply invoke super() and save the incoming meta
@@ -164,9 +176,38 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 		fdStepname.right = new FormAttachment(100, 0);
 		wStepname.setLayoutData(fdStepname);
 
+//        SelectionListener lsSelection = new SelectionAdapter() {
+//            public void widgetSelected( SelectionEvent e ) {
+//                meta.setChanged();
+////                setComboBoxesLookup();
+//            }
+//        };
+
+        // Lookup step line...
+//        wlStep = new Label( shell, SWT.RIGHT );
+//        wlStep.setText(BaseMessages.getString(PKG, "StreamLookupDialog.LookupStep.Label"));
+//        props.setLook( wlStep );
+//        fdlStep = new FormData();
+//        fdlStep.left = new FormAttachment( 0, 0 );
+//        fdlStep.right = new FormAttachment( middle, -margin );
+//        fdlStep.top = new FormAttachment( wStepname, margin * 2 );
+//        wlStep.setLayoutData( fdlStep );
+//        wStep = new CCombo( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+//        props.setLook( wStep );
+
+//        List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, true );
+//        for ( StepMeta previousStep : previousSteps ) {
+//            wStep.add( previousStep.getName() );
+//        }
+        // transMeta.getInfoStep()
+        previousSteps = transMeta.getPrevStepNames(stepname);
+
+//        wStep.addModifyListener( lsMod );
+//        wStep.addSelectionListener( lsSelection );
+
 		// output field value
 		Label wlValName = new Label(shell, SWT.RIGHT);
-		wlValName.setText(BaseMessages.getString(PKG, "Demo.FieldName.Label")); 
+		wlValName.setText(BaseMessages.getString(PKG, "Demo.FieldName.Label"));
 		props.setLook(wlValName);
 		FormData fdlValName = new FormData();
 		fdlValName.left = new FormAttachment(0, 0);
@@ -182,25 +223,69 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 		fdValName.right = new FormAttachment(100, 0);
 		fdValName.top = new FormAttachment(wStepname, margin);
 		wHelloFieldName.setLayoutData(fdValName);
-		      
-		// OK and cancel buttons
-		wOK = new Button(shell, SWT.PUSH);
-		wOK.setText(BaseMessages.getString(PKG, "System.Button.OK")); 
-		wCancel = new Button(shell, SWT.PUSH);
-		wCancel.setText(BaseMessages.getString(PKG, "System.Button.Cancel")); 
 
-		BaseStepDialog.positionBottomButtons(shell, new Button[] { wOK, wCancel }, margin, wHelloFieldName);
+        // Get the previous steps...
 
-		// Add listeners for cancel and OK
-		lsCancel = new Listener() {
-			public void handleEvent(Event e) {cancel();}
-		};
-		lsOK = new Listener() {
-			public void handleEvent(Event e) {ok();}
-		};
 
-		wCancel.addListener(SWT.Selection, lsCancel);
-		wOK.addListener(SWT.Selection, lsOK);
+        wOK = new Button( shell, SWT.PUSH );
+        wOK.setText(BaseMessages.getString(PKG, "System.Button.OK"));
+        wGet = new Button( shell, SWT.PUSH );
+        wGet.setText( BaseMessages.getString( PKG, "PrioritizeStreamsDialog.getPreviousSteps.Label" ) );
+        wCancel = new Button( shell, SWT.PUSH );
+        wCancel.setText( BaseMessages.getString( PKG, "System.Button.Cancel" ) );
+
+        setButtonPositions(new Button[]{wOK, wGet, wCancel}, margin, null);
+
+        // Table with fields
+        wlFields = new Label( shell, SWT.NONE );
+        wlFields.setText( BaseMessages.getString( PKG, "PrioritizeStreamsDialog.Fields.Label" ) );
+        props.setLook( wlFields );
+        fdlFields = new FormData();
+        fdlFields.left = new FormAttachment( 0, 0 );
+        fdlFields.top = new FormAttachment( wStepname, margin );
+        wlFields.setLayoutData( fdlFields );
+
+        final int FieldsCols = 1;
+        final int FieldsRows = 5;//meta.getStepName().length;
+
+        ColumnInfo[] colinf = new ColumnInfo[FieldsCols];
+        colinf[0] =
+                new ColumnInfo(
+                        BaseMessages.getString( PKG, "PrioritizeStreamsDialog.Fieldname.Column" ),
+                        ColumnInfo.COLUMN_TYPE_CCOMBO, previousSteps, false );
+
+        wFields =
+                new TableView(
+                        transMeta, shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, FieldsRows, lsMod, props );
+
+        fdFields = new FormData();
+        fdFields.left = new FormAttachment( 0, 0 );
+        fdFields.top = new FormAttachment( wlFields, margin );
+        fdFields.right = new FormAttachment( 100, 0 );
+        fdFields.bottom = new FormAttachment( wOK, -2 * margin );
+        wFields.setLayoutData( fdFields );
+
+        // Add listeners
+        lsCancel = new Listener() {
+            public void handleEvent( Event e ) {
+                cancel();
+            }
+        };
+        lsGet = new Listener() {
+            public void handleEvent( Event e ) {
+                get();
+            }
+        };
+        lsOK = new Listener() {
+            public void handleEvent( Event e ) {
+                ok();
+            }
+        };
+
+
+        wCancel.addListener( SWT.Selection, lsCancel );
+        wOK.addListener( SWT.Selection, lsOK );
+        wGet.addListener( SWT.Selection, lsGet );
 
 		// default listener (for hitting "enter")
 		lsDef = new SelectionAdapter() {
@@ -242,8 +327,23 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 	 */
 	private void populateDialog() {
 		wStepname.selectAll();
-		wHelloFieldName.setText(meta.getOutputField());	
+		wHelloFieldName.setText(meta.getOutputField());
 	}
+
+    private void get() {
+        wFields.removeAll();
+        Table table = wFields.table;
+
+        for ( int i = 0; i < previousSteps.length; i++ ) {
+            TableItem ti = new TableItem( table, SWT.NONE );
+            ti.setText( 0, "" + ( i + 1 ) );
+            ti.setText( 1, previousSteps[i] );
+        }
+        wFields.removeEmptyRows();
+        wFields.setRowNums();
+        wFields.optWidth(true);
+
+    }
 
 	/**
 	 * Called when the user cancels the dialog.  

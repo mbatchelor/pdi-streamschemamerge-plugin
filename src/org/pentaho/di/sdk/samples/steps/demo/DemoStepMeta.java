@@ -95,6 +95,8 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
 	 */
 	private String outputField;
 
+    private String[] stepName;
+
 	/**
 	 * Constructor should call super() to make sure the base class has a chance to initialize properly.
 	 */
@@ -331,7 +333,7 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
             ioMeta.addStream( new Stream( StreamInterface.StreamType.INFO, null, BaseMessages.getString(
                     PKG, "MergeJoinMeta.InfoStream.FirstStream.Description" ), StreamIcon.INFO, "Data Grid") );
             ioMeta.addStream(new Stream(StreamInterface.StreamType.INFO, null, BaseMessages.getString(
-                    PKG, "MergeJoinMeta.InfoStream.SecondStream.Description"), StreamIcon.INFO, "Data Grid 2"));
+					PKG, "MergeJoinMeta.InfoStream.SecondStream.Description"), StreamIcon.INFO, "Data Grid 2"));
         }
 
         return ioMeta;
@@ -343,5 +345,12 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
             stream.setStepMeta( StepMeta.findStep( steps, (String) stream.getSubject() ) );
         }
     }
+
+	/**
+	 * @return Returns the stepName.
+	 */
+	public String[] getStepName() {
+		return stepName;
+	}
 
 }
