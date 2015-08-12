@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="PdiSdkDemoStepPlugin" default="dist" basedir="..">
+<project name="pdi-streamschemamerge-plugin" default="dist" basedir="..">
 	<description>
         Build file for a PDI step plugin
     </description>
@@ -11,9 +11,9 @@
 	<property name="src" location="src" />
 	<property name="classes" location="classes" />
 	<property name="dist" location="dist" />
-	<property name="diststep" location="${dist}/steps/Demo" />
-	<property name="pluginname" value="Demo" />
-	<property name="jarfilename" value="demo-step.jar" />
+	<property name="diststep" location="${dist}/steps/StreamSchemaMerge" />
+	<property name="pluginname" value="StreamSchemaMerge" />
+	<property name="jarfilename" value="stream-schema-merge-step.jar" />
 
 	<!-- used to compile code -->
 	<path id="compile.classpath">

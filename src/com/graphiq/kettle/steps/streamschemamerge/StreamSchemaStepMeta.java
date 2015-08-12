@@ -20,7 +20,7 @@
 *
 ******************************************************************************/
 
-package org.pentaho.di.sdk.samples.steps.demo;
+package com.graphiq.kettle.steps.streamschemamerge;
 
 import java.util.List;
 
@@ -71,21 +71,21 @@ import org.w3c.dom.Node;
  */
 
 @Step(	
-		id = "DemoStep",
-		image = "org/pentaho/di/sdk/samples/steps/demo/resources/icon.png",
-		i18nPackageName="org.pentaho.di.sdk.samples.steps.demo",
-		name="DemoStep.Name",
-		description = "DemoStep.TooltipDesc",
-		categoryDescription="i18n:org.pentaho.di.trans.step:BaseStep.Category.Transform"
+		id = "StreamSchemaStep",
+		image = "com/graphiq/kettle/steps/streamschemamerge/resources/icon.svg",
+		i18nPackageName="com.graphiq.kettle.steps.streamschemamerge",
+		name="StreamSchemaStep.Name",
+		description = "StreamSchemaStep.TooltipDesc",
+		categoryDescription="StreamSchemaStep.Category"
 )
-public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
+public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterface {
 
 	/**
 	 *	The PKG member is used when looking up internationalized strings.
 	 *	The properties file with localized keys is expected to reside in 
 	 *	{the package of the class specified}/messages/messages_{locale}.properties   
 	 */
-	private static Class<?> PKG = DemoStepMeta.class; // for i18n purposes
+	private static Class<?> PKG = com.graphiq.kettle.steps.streamschemamerge.StreamSchemaStepMeta.class; // for i18n purposes
 	
 	/**
 	 * Stores the name of the field added to the row-stream. 
@@ -95,7 +95,7 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
 	/**
 	 * Constructor should call super() to make sure the base class has a chance to initialize properly.
 	 */
-	public DemoStepMeta() {
+	public StreamSchemaStepMeta() {
 		super(); 
 	}
 	
@@ -110,7 +110,7 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
 	 * @return 			new instance of a dialog for this step 
 	 */
 	public StepDialogInterface getDialog(Shell shell, StepMetaInterface meta, TransMeta transMeta, String name) {
-		return new DemoStepDialog(shell, meta, transMeta, name);
+		return new StreamSchemaStepDialog(shell, meta, transMeta, name);
 	}
 
 	/**
@@ -125,14 +125,14 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
 	 * @return						the new instance of a step implementation 
 	 */
 	public StepInterface getStep(StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr, TransMeta transMeta, Trans disp) {
-		return new DemoStep(stepMeta, stepDataInterface, cnr, transMeta, disp);
+		return new StreamSchemaStep(stepMeta, stepDataInterface, cnr, transMeta, disp);
 	}
 
 	/**
 	 * Called by PDI to get a new instance of the step data class.
 	 */
 	public StepDataInterface getStepData() {
-		return new DemoStepData();
+		return new StreamSchemaStepData();
 	}	
 
 	/**
@@ -305,10 +305,10 @@ public class DemoStepMeta extends BaseStepMeta implements StepMetaInterface {
 
 		// See if there are input streams leading to this step!
 		if (input.length > 0) {
-			cr = new CheckResult(CheckResult.TYPE_RESULT_OK, BaseMessages.getString(PKG, "Demo.CheckResult.ReceivingRows.OK"), stepMeta);
+			cr = new CheckResult(CheckResult.TYPE_RESULT_OK, BaseMessages.getString(PKG, "StreamSchemaStep.CheckResult.ReceivingRows.OK"), stepMeta);
 			remarks.add(cr);
 		} else {
-			cr = new CheckResult(CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(PKG, "Demo.CheckResult.ReceivingRows.ERROR"), stepMeta);
+			cr = new CheckResult(CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(PKG, "StreamSchemaStep.CheckResult.ReceivingRows.ERROR"), stepMeta);
 			remarks.add(cr);
 		}	
     	

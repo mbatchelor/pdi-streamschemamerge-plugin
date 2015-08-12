@@ -20,7 +20,7 @@
 *
 ******************************************************************************/
 
-package org.pentaho.di.sdk.samples.steps.demo;
+package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
@@ -46,11 +46,11 @@ import org.pentaho.di.trans.step.StepDataInterface;
  * the data class. 
  *   
  */
-public class DemoStepData extends BaseStepData implements StepDataInterface {
+public class StreamSchemaStepData extends BaseStepData implements StepDataInterface {
 
 	public RowMetaInterface outputRowMeta;
 	
-    public DemoStepData()
+    public StreamSchemaStepData()
 	{
 		super();
 	}

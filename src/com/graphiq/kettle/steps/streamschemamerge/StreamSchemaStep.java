@@ -20,7 +20,7 @@
 *
 ******************************************************************************/
 
-package org.pentaho.di.sdk.samples.steps.demo;
+package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
@@ -53,7 +53,7 @@ import org.pentaho.di.trans.step.StepMetaInterface;
  * 
  */
 
-public class DemoStep extends BaseStep implements StepInterface {
+public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 	/**
 	 * The constructor should simply pass on its arguments to the parent class.
@@ -64,7 +64,7 @@ public class DemoStep extends BaseStep implements StepInterface {
 	 * @param t					transformation description
 	 * @param dis				transformation executing
 	 */
-	public DemoStep(StepMeta s, StepDataInterface stepDataInterface, int c, TransMeta t, Trans dis) {
+	public StreamSchemaStep(StepMeta s, StepDataInterface stepDataInterface, int c, TransMeta t, Trans dis) {
 		super(s, stepDataInterface, c, t, dis);
 	}
 	
@@ -89,8 +89,8 @@ public class DemoStep extends BaseStep implements StepInterface {
 	 */
 	public boolean init(StepMetaInterface smi, StepDataInterface sdi) {
 		// Casting to step-specific implementation classes is safe
-		DemoStepMeta meta = (DemoStepMeta) smi;
-		DemoStepData data = (DemoStepData) sdi;
+		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
+		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
 		return super.init(meta, data);
 	}	
@@ -119,8 +119,8 @@ public class DemoStep extends BaseStep implements StepInterface {
 	public boolean processRow(StepMetaInterface smi, StepDataInterface sdi) throws KettleException {
 
 		// safely cast the step settings (meta) and runtime info (data) to specific implementations 
-		DemoStepMeta meta = (DemoStepMeta) smi;
-		DemoStepData data = (DemoStepData) sdi;
+		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
+		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
 		// get incoming row, getRow() potentially blocks waiting for more rows, returns null if no more rows expected
 		Object[] r = getRow(); 
@@ -175,8 +175,8 @@ public class DemoStep extends BaseStep implements StepInterface {
 	public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
 
 		// Casting to step-specific implementation classes is safe
-		DemoStepMeta meta = (DemoStepMeta) smi;
-		DemoStepData data = (DemoStepData) sdi;
+		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
+		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 		
 		super.dispose(meta, data);
 	}

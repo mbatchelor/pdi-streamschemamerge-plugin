@@ -20,7 +20,7 @@
 *
 ******************************************************************************/
 
-package org.pentaho.di.sdk.samples.steps.demo;
+package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
@@ -61,19 +61,19 @@ import org.pentaho.di.trans.step.StepDialogInterface;
  * - report whether the user changed any settings when confirming the dialog 
  * 
  */
-public class DemoStepDialog extends BaseStepDialog implements StepDialogInterface {
+public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialogInterface {
 
 	/**
 	 *	The PKG member is used when looking up internationalized strings.
 	 *	The properties file with localized keys is expected to reside in 
 	 *	{the package of the class specified}/messages/messages_{locale}.properties   
 	 */
-	private static Class<?> PKG = DemoStepMeta.class; // for i18n purposes
+	private static Class<?> PKG = StreamSchemaStepMeta.class; // for i18n purposes
 
 	// this is the object the stores the step's settings
 	// the dialog reads the settings from it when opening
 	// the dialog writes the settings to it when confirmed 
-	private DemoStepMeta meta;
+	private StreamSchemaStepMeta meta;
 
 	// text field holding the name of the field to add to the row stream
 	private Text wHelloFieldName;
@@ -88,9 +88,9 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 	 * @param transMeta	transformation description
 	 * @param sname		the step name
 	 */
-	public DemoStepDialog(Shell parent, Object in, TransMeta transMeta, String sname) {
+	public StreamSchemaStepDialog(Shell parent, Object in, TransMeta transMeta, String sname) {
 		super(parent, (BaseStepMeta) in, transMeta, sname);
-		meta = (DemoStepMeta) in;
+		meta = (StreamSchemaStepMeta) in;
 	}
 
 	/**
@@ -139,7 +139,7 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 		formLayout.marginHeight = Const.FORM_MARGIN;
 
 		shell.setLayout(formLayout);
-		shell.setText(BaseMessages.getString(PKG, "Demo.Shell.Title")); 
+		shell.setText(BaseMessages.getString(PKG, "StreamSchemaStep.Shell.Title"));
 
 		int middle = props.getMiddlePct();
 		int margin = Const.MARGIN;
@@ -166,7 +166,7 @@ public class DemoStepDialog extends BaseStepDialog implements StepDialogInterfac
 
 		// output field value
 		Label wlValName = new Label(shell, SWT.RIGHT);
-		wlValName.setText(BaseMessages.getString(PKG, "Demo.FieldName.Label")); 
+		wlValName.setText(BaseMessages.getString(PKG, "StreamSchemaStep.FieldName.Label"));
 		props.setLook(wlValName);
 		FormData fdlValName = new FormData();
 		fdlValName.left = new FormAttachment(0, 0);
