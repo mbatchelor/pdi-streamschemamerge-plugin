@@ -36,6 +36,7 @@ import org.eclipse.swt.widgets.*;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
@@ -204,9 +205,7 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		wlSteps.setLayoutData(fdlSteps);
 
 		final int FieldsCols = 1;
-		//TODO replace hardcoded 5 with implementation of below
-        //meta.getStepName().length;
-        final int FieldsRows = 5;
+        final int FieldsRows = meta.getNumberOfSteps();
 
         previousSteps = transMeta.getPrevStepNames(stepname);
 
@@ -283,8 +282,27 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 	 * and puts it into the dialog controls.
 	 */
     private void populateDialog() {
-		wStepname.selectAll();
 		wHelloFieldName.setText(meta.getOutputField());
+
+        Table table = wSteps.table;
+        if ( meta.getNumberOfSteps() > 0 ) {
+            table.removeAll();
+        }
+        String[] stepNames = meta.getStepsToMerge();
+        for ( int i = 0; i < stepNames.length; i++ ) {
+            TableItem ti = new TableItem( table, SWT.NONE );
+            ti.setText( 0, "" + ( i + 1 ) );
+            if ( stepNames[i] != null ) {
+                ti.setText( 1, stepNames[i] );
+            }
+        }
+
+        wSteps.removeEmptyRows();
+        wSteps.setRowNums();
+        wSteps.optWidth(true);
+
+        wStepname.selectAll();
+        wStepname.setFocus();
 	}
 
     private void get() {
@@ -322,8 +340,21 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		// The "stepname" variable will be the return value for the open() method. 
 		// Setting to step name from the dialog control
 		stepname = wStepname.getText(); 
-		// Setting the  settings to the meta object
+		// set output field name
 		meta.setOutputField(wHelloFieldName.getText());
+
+        // TODO eliminate copying here and copying when placed in meta
+        int nrsteps = wSteps.nrNonEmpty();
+        String[] stepNames = new String[nrsteps];
+        for ( int i = 0; i < nrsteps; i++ ) {
+            TableItem ti = wSteps.getNonEmpty(i);
+            StepMeta tm = transMeta.findStep(ti.getText(1));
+            if (tm != null) {
+                stepNames[i] = tm.getName();
+            }
+        }
+        meta.setStepsToMerge(stepNames);
+
 		// close the SWT dialog window
 		dispose();
 	}

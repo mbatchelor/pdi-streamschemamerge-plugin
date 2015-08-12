@@ -22,11 +22,14 @@
 
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -41,6 +44,7 @@ import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
+import org.pentaho.di.shared.SharedObjectInterface;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.*;
@@ -90,12 +94,25 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	private String outputField;
 
+    /**
+     * Stores the names of the steps to
+     */
+    private ArrayList<String> stepsToMerge;
+
 	/**
 	 * Constructor should call super() to make sure the base class has a chance to initialize properly.
 	 */
 	public StreamSchemaStepMeta() {
 		super(); 
 	}
+
+    /**
+     * Prevents error box from popping up when sending in different row formts
+     * @return true
+     */
+    public boolean excludeFromRowLayoutVerification() {
+        return true;
+    }
 	
 	/**
 	 * Called by Spoon to get a new instance of the SWT dialog for the step.
@@ -156,8 +173,34 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public void setOutputField(String outputField) {
 		this.outputField = outputField;
 	}
-	
-	/**
+
+    /**
+     * Getter for the fields that should be merged
+     * @return array of field names
+     */
+    public String[] getStepsToMerge() {
+        if (stepsToMerge == null) {
+            return new String[0];
+        } else {
+            return stepsToMerge.toArray(new String[stepsToMerge.size()]);
+        }
+
+    }
+
+    public int getNumberOfSteps() {
+        if (stepsToMerge == null) {
+            return 0;
+        } else {
+            return stepsToMerge.size();
+        }
+    }
+
+    public void setStepsToMerge(String[] arrayOfSteps) {
+        stepsToMerge = new ArrayList<String>();
+        Collections.addAll(stepsToMerge, arrayOfSteps);
+    }
+
+    /**
 	 * This method is used when a step is duplicated in Spoon. It needs to return a deep copy of this
 	 * step meta object. Be sure to create proper deep copies if the step configuration is stored in
 	 * modifiable objects.
@@ -181,10 +224,16 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 * @return a string containing the XML serialization of this step
 	 */
 	public String getXML() throws KettleValueException {
-		
-		// only one field to serialize
-		String xml = XMLHandler.addTagValue("outputfield", outputField);
-		return xml;
+		StringBuilder xml = new StringBuilder();
+		xml.append(XMLHandler.addTagValue("outputfield", outputField));
+        xml.append( "    <steps>" + Const.CR );
+        for (String stepName : stepsToMerge) {
+            xml.append( "      <step>" + Const.CR );
+            xml.append( "        " + XMLHandler.addTagValue( "name", stepName ) );
+            xml.append( "        </step>" + Const.CR );
+        }
+        xml.append( "      </steps>" + Const.CR );
+		return xml.toString();
 	}
 
 	/**
@@ -199,13 +248,28 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	public void loadXML(Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore) throws KettleXMLException {
 
-		try {
-			setOutputField(XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "outputfield")));
-		} catch (Exception e) {
-			throw new KettleXMLException("Demo plugin unable to read step info from XML node", e);
-		}
+        readData(stepnode);
 
-	}	
+	}
+
+    private void readData( Node stepnode) throws KettleXMLException {
+        try {
+            //TODO put the strings in a config file or make constants in this file
+            outputField = XMLHandler.getTagValue(stepnode, "outputfield");
+            Node steps = XMLHandler.getSubNode( stepnode, "steps" );
+            int nrsteps = XMLHandler.countNodes( steps, "step" );
+
+            stepsToMerge.clear();
+
+            for ( int i = 0; i < nrsteps; i++ ) {
+                Node fnode = XMLHandler.getSubNodeByNr( steps, "step", i );
+                stepsToMerge.add(XMLHandler.getTagValue( fnode, "name" ));
+            }
+        } catch ( Exception e ) {
+            throw new KettleXMLException( "Unable to load step info from XML", e );
+        }
+    }
+
 	/**
 	 * This method is called by Spoon when a step needs to serialize its configuration to a repository.
 	 * The repository implementation provides the necessary methods to save the step attributes.
