@@ -32,16 +32,12 @@ import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.*;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.ui.core.widget.ColumnInfo;
+import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
@@ -75,8 +71,13 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 	// the dialog writes the settings to it when confirmed 
 	private StreamSchemaStepMeta meta;
 
+	private String[] previousSteps;  // steps sending data in to this step
+
 	// text field holding the name of the field to add to the row stream
 	private Text wHelloFieldName;
+	private Label wlSteps;
+	private TableView wSteps;
+	private FormData fdlSteps, fdSteps;
 
 	/**
 	 * The constructor should simply invoke super() and save the incoming meta
@@ -164,9 +165,19 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		fdStepname.right = new FormAttachment(100, 0);
 		wStepname.setLayoutData(fdStepname);
 
+        // OK, get and cancel buttons
+        wOK = new Button( shell, SWT.PUSH );
+        wOK.setText(BaseMessages.getString(PKG, "System.Button.OK"));
+        wGet = new Button( shell, SWT.PUSH );
+        wGet.setText( BaseMessages.getString( PKG, "StreamSchema.getPreviousSteps.Label" ) );
+        wCancel = new Button(shell, SWT.PUSH);
+        wCancel.setText(BaseMessages.getString(PKG, "System.Button.Cancel"));
+
+        setButtonPositions(new Button[]{wOK, wGet, wCancel}, margin, null);
+
 		// output field value
 		Label wlValName = new Label(shell, SWT.RIGHT);
-		wlValName.setText(BaseMessages.getString(PKG, "StreamSchemaStep.FieldName.Label"));
+		wlValName.setText(BaseMessages.getString(PKG, "StreamSchemaStepDialog.FieldName.Label"));
 		props.setLook(wlValName);
 		FormData fdlValName = new FormData();
 		fdlValName.left = new FormAttachment(0, 0);
@@ -182,14 +193,39 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		fdValName.right = new FormAttachment(100, 0);
 		fdValName.top = new FormAttachment(wStepname, margin);
 		wHelloFieldName.setLayoutData(fdValName);
-		      
-		// OK and cancel buttons
-		wOK = new Button(shell, SWT.PUSH);
-		wOK.setText(BaseMessages.getString(PKG, "System.Button.OK")); 
-		wCancel = new Button(shell, SWT.PUSH);
-		wCancel.setText(BaseMessages.getString(PKG, "System.Button.Cancel")); 
 
-		BaseStepDialog.positionBottomButtons(shell, new Button[] { wOK, wCancel }, margin, wHelloFieldName);
+		// Table with fields
+		wlSteps = new Label( shell, SWT.NONE );
+		wlSteps.setText(BaseMessages.getString(PKG, "StreamSchemaStepDialog.Steps.Label"));
+		props.setLook(wlSteps);
+		fdlSteps = new FormData();
+		fdlSteps.left = new FormAttachment( 0, 0 );
+		fdlSteps.top = new FormAttachment( wHelloFieldName, margin );
+		wlSteps.setLayoutData(fdlSteps);
+
+		final int FieldsCols = 1;
+		//TODO replace hardcoded 5 with implementation of below
+        //meta.getStepName().length;
+        final int FieldsRows = 5;
+
+        previousSteps = transMeta.getPrevStepNames(stepname);
+
+		ColumnInfo[] colinf = new ColumnInfo[FieldsCols];
+		colinf[0] =
+				new ColumnInfo(
+						BaseMessages.getString( PKG, "StreamSchemaStepDialog.StepName.Column" ),
+						ColumnInfo.COLUMN_TYPE_CCOMBO, previousSteps, false );
+
+		wSteps =
+				new TableView(
+						transMeta, shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, FieldsRows, lsMod, props );
+
+		fdSteps = new FormData();
+		fdSteps.left = new FormAttachment( 0, 0 );
+		fdSteps.top = new FormAttachment(wlSteps, margin );
+		fdSteps.right = new FormAttachment( 100, 0 );
+		fdSteps.bottom = new FormAttachment( wOK, -2 * margin );
+		wSteps.setLayoutData(fdSteps);
 
 		// Add listeners for cancel and OK
 		lsCancel = new Listener() {
@@ -198,9 +234,15 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		lsOK = new Listener() {
 			public void handleEvent(Event e) {ok();}
 		};
+        lsGet = new Listener() {
+            public void handleEvent( Event e ) {
+                get();
+            }
+        };
 
 		wCancel.addListener(SWT.Selection, lsCancel);
 		wOK.addListener(SWT.Selection, lsOK);
+        wGet.addListener( SWT.Selection, lsGet );
 
 		// default listener (for hitting "enter")
 		lsDef = new SelectionAdapter() {
@@ -240,10 +282,25 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 	 * This helper method puts the step configuration stored in the meta object
 	 * and puts it into the dialog controls.
 	 */
-	private void populateDialog() {
+    private void populateDialog() {
 		wStepname.selectAll();
-		wHelloFieldName.setText(meta.getOutputField());	
+		wHelloFieldName.setText(meta.getOutputField());
 	}
+
+    private void get() {
+        wSteps.removeAll();
+        Table table = wSteps.table;
+
+        for ( int i = 0; i < previousSteps.length; i++ ) {
+            TableItem ti = new TableItem( table, SWT.NONE );
+            ti.setText( 0, "" + ( i + 1 ) );
+            ti.setText( 1, previousSteps[i] );
+        }
+        wSteps.removeEmptyRows();
+        wSteps.setRowNums();
+        wSteps.optWidth(true);
+
+    }
 
 	/**
 	 * Called when the user cancels the dialog.  

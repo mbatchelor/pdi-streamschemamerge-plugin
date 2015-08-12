@@ -43,12 +43,10 @@ import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.BaseStepMeta;
-import org.pentaho.di.trans.step.StepDataInterface;
-import org.pentaho.di.trans.step.StepDialogInterface;
-import org.pentaho.di.trans.step.StepInterface;
-import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.step.*;
+import org.pentaho.di.trans.step.errorhandling.Stream;
+import org.pentaho.di.trans.step.errorhandling.StreamIcon;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.metastore.api.IMetaStore;
 import org.w3c.dom.Node;
 
@@ -312,6 +310,31 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 			remarks.add(cr);
 		}	
     	
+	}
+
+    /**
+     * Returns the Input/Output metadata for this step. The generator step only produces output, does not accept input!
+     */
+    public StepIOMetaInterface getStepIOMeta() {
+        if ( ioMeta == null ) {
+
+            ioMeta = new StepIOMeta( true, true, false, false, false, false );
+
+            // make dynamic
+            ioMeta.addStream( new Stream( StreamInterface.StreamType.INFO, null, BaseMessages.getString(
+                    PKG, "MergeJoinMeta.InfoStream.FirstStream.Description" ), StreamIcon.INFO, "Data Grid") );
+            ioMeta.addStream(new Stream(StreamInterface.StreamType.INFO, null, BaseMessages.getString(
+                    PKG, "MergeJoinMeta.InfoStream.SecondStream.Description"), StreamIcon.INFO, "Data Grid 2"));
+        }
+
+        return ioMeta;
+    }
+
+	@Override
+	public void searchInfoAndTargetSteps( List<StepMeta> steps ) {
+		for ( StreamInterface stream : getStepIOMeta().getInfoStreams() ) {
+			stream.setStepMeta( StepMeta.findStep( steps, (String) stream.getSubject() ) );
+		}
 	}
 
 
