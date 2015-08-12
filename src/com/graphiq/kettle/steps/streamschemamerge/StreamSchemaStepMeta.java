@@ -384,13 +384,12 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 
             ioMeta = new StepIOMeta( true, true, false, false, false, false );
 
-            // make dynamic
-            ioMeta.addStream( new Stream( StreamInterface.StreamType.INFO, null, BaseMessages.getString(
-                    PKG, "MergeJoinMeta.InfoStream.FirstStream.Description" ), StreamIcon.INFO, "Data Grid") );
-            ioMeta.addStream(new Stream(StreamInterface.StreamType.INFO, null, BaseMessages.getString(
-                    PKG, "MergeJoinMeta.InfoStream.SecondStream.Description"), StreamIcon.INFO, "Data Grid 2"));
+            if (getNumberOfSteps() > 0) {
+                for (String stepName : stepsToMerge) {
+                    ioMeta.addStream( new Stream( StreamInterface.StreamType.INFO, null, stepName, StreamIcon.INFO, stepName) );
+                }
+            }
         }
-
         return ioMeta;
     }
 
