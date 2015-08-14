@@ -97,7 +97,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
     /**
      * Stores the names of the steps to
      */
-    private ArrayList<String> stepsToMerge;
+    private ArrayList<String> stepsToMerge = new ArrayList<String>();
 
 	/**
 	 * Constructor should call super() to make sure the base class has a chance to initialize properly.
@@ -225,7 +225,9 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	public String getXML() throws KettleValueException {
 		StringBuilder xml = new StringBuilder();
-		xml.append(XMLHandler.addTagValue("outputfield", outputField));
+		xml.append("    <outputfield>" + Const.CR);
+        xml.append("        " + XMLHandler.addTagValue("outputfield", outputField));
+        xml.append("    </outputfield>" + Const.CR);
         xml.append( "    <steps>" + Const.CR );
         for (String stepName : stepsToMerge) {
             xml.append( "      <step>" + Const.CR );
@@ -255,15 +257,23 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
     private void readData( Node stepnode) throws KettleXMLException {
         try {
             //TODO put the strings in a config file or make constants in this file
-            outputField = XMLHandler.getTagValue(stepnode, "outputfield");
+            outputField = XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "outputfield"));
             Node steps = XMLHandler.getSubNode( stepnode, "steps" );
             int nrsteps = XMLHandler.countNodes( steps, "step" );
 
             stepsToMerge.clear();
 
             for ( int i = 0; i < nrsteps; i++ ) {
+                getStepIOMeta().addStream(
+                        new Stream( StreamInterface.StreamType.INFO, null, "Streams to Merge", StreamIcon.INFO, null ) );
+            }
+
+            List<StreamInterface> infoStreams = getStepIOMeta().getInfoStreams();
+            for ( int i = 0; i < nrsteps; i++ ) {
                 Node fnode = XMLHandler.getSubNodeByNr( steps, "step", i );
-                stepsToMerge.add(XMLHandler.getTagValue( fnode, "name" ));
+                String name = XMLHandler.getTagValue(fnode, "name");
+                stepsToMerge.add(name);
+                infoStreams.get( i ).setSubject(name);
             }
         } catch ( Exception e ) {
             throw new KettleXMLException( "Unable to load step info from XML", e );
@@ -324,20 +334,15 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public void getFields(RowMetaInterface inputRowMeta, String name, RowMetaInterface[] info, StepMeta nextStep, VariableSpace space, Repository repository, IMetaStore metaStore) throws KettleStepException{
 
 		/*
-		 * This implementation appends the outputField to the row-stream
+		 * We don't have any input fields so we ingore inputRowMeta
 		 */
+        SchemaMapper tMapping = new SchemaMapper(info, SchemaMapper.SchemaMergeType.UNION);
+        RowMetaInterface base = tMapping.getRow();
 
-		// a value meta object contains the meta data for a field
-		ValueMetaInterface v = new ValueMeta(outputField, ValueMeta.TYPE_STRING);
-		
-		// setting trim type to "both"
-		v.setTrimType(ValueMeta.TRIM_TYPE_BOTH);
-
-		// the name of the step that adds this field
-		v.setOrigin(name);
-		
-		// modify the row structure and add the field this step generates  
-		inputRowMeta.addValueMeta(v);
+        for ( int i = 0; i < base.size(); i++ ) {
+            base.getValueMeta( i ).setOrigin( name );
+        }
+        inputRowMeta.mergeRowMeta(base);
 		
 	}
 
@@ -376,28 +381,19 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
     	
 	}
 
-    /**
-     * Returns the Input/Output metadata for this step. The generator step only produces output, does not accept input!
-     */
-    public StepIOMetaInterface getStepIOMeta() {
-        if ( ioMeta == null ) {
-
-            ioMeta = new StepIOMeta( true, true, false, false, false, false );
-
-            if (getNumberOfSteps() > 0) {
-                for (String stepName : stepsToMerge) {
-                    ioMeta.addStream( new Stream( StreamInterface.StreamType.INFO, null, stepName, StreamIcon.INFO, stepName) );
-                }
-            }
-        }
-        return ioMeta;
-    }
-
 	@Override
 	public void searchInfoAndTargetSteps( List<StepMeta> steps ) {
 		for ( StreamInterface stream : getStepIOMeta().getInfoStreams() ) {
 			stream.setStepMeta( StepMeta.findStep( steps, (String) stream.getSubject() ) );
 		}
+	}
+
+    public void resetStepIoMeta() {
+        // Do nothing, don't reset as there is no need to do this.
+    }
+
+	public void wipeStepIoMeta() {
+		ioMeta = null;
 	}
 
 

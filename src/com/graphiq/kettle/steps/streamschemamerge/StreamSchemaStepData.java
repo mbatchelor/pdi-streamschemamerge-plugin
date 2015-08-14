@@ -22,9 +22,15 @@
 
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
+
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 /**
  * This class is part of the demo step plug-in implementation.
@@ -54,5 +60,25 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 	{
 		super();
 	}
+
+	public SchemaMapper tMapping;
+
+	public List<StreamInterface> infoStreams;
+
+	public RowSet[] rowSets;
+
+	public RowMetaInterface[] rowMetas;
+
+	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
+
+	public int numSteps, currentNum;
+
+	public RowSet currentRowSet;
+
+	HashMap<Integer, Integer> rowMapping;
+
+	RowMetaInterface rowMeta;
+
+	RowSet r;
 }
 	

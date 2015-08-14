@@ -22,6 +22,7 @@
 
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMetaInterface;
@@ -32,6 +33,7 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
 /**
  * This class is part of the demo step plug-in implementation.
@@ -92,6 +94,11 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
+		data.infoStreams = meta.getStepIOMeta().getInfoStreams();
+		data.numSteps = data.infoStreams.size();
+		data.rowMetas = new RowMetaInterface[data.numSteps];
+		data.rowSets = new RowSet[data.numSteps];
+
 		return super.init(meta, data);
 	}	
 
@@ -122,32 +129,57 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
-		// get incoming row, getRow() potentially blocks waiting for more rows, returns null if no more rows expected
-		Object[] r = getRow(); 
-		
-		// if no more rows are expected, indicate step is finished and processRow() should not be called again
-		if (r == null){
-			setOutputDone();
-			return false;
-		}
-
 		// the "first" flag is inherited from the base step implementation
 		// it is used to guard some processing tasks, like figuring out field indexes
 		// in the row structure that only need to be done once
 		if (first) {
 			first = false;
-			// clone the input row structure and place it in our data object
-			data.outputRowMeta = (RowMetaInterface) getInputRowMeta().clone();
-			// use meta.getFields() to change it, so it reflects the output row structure 
-			meta.getFields(data.outputRowMeta, getStepname(), null, null, this, null, null);
+
+			int i = 0;
+			for (StreamInterface ignore : data.infoStreams) {
+				data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
+				data.rowSets[i] = data.r;
+                /*
+                 Avoids race condition. Row metas are not available until the previous steps have called
+                 putRowWait at least once
+                 */
+				while (data.rowMetas[i] == null && !isStopped()) {
+					data.rowMetas[i] = data.r.getRowMeta();
+				}
+				i++;
+			}
+			data.tMapping = new SchemaMapper(data.rowMetas, SchemaMapper.SchemaMergeType.UNION);
+			data.mapping = data.tMapping.getMapping();
+			data.outputRowMeta = data.tMapping.getRow();
+			data.currentRowSet = data.rowSets[0];  // get first row set
+		}
+
+		// get incoming row, getRow() potentially blocks waiting for more rows, returns null if no more rows expected
+		Object[] incomingRow = getOneRow(data);
+
+		while ( incomingRow == null && data.currentNum < data.numSteps - 1 && !isStopped() ) {
+			incomingRow = getOneRow(data);
+		}
+
+		// if no more rows are expected, indicate step is finished and processRow() should not be called again
+		if (incomingRow == null){
+			setOutputDone();
+			return false;
 		}
 
 		// safely add the string "Hello World!" at the end of the output row
-		// the row array will be resized if necessary 
-		Object[] outputRow = RowDataUtil.addValueData(r, data.outputRowMeta.size() - 1, "Hello World!");
+		// the row array will be resized if necessary
+		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
+
+		data.rowMapping = data.mapping.get(data.currentNum);
+		data.rowMeta = data.rowMetas[data.currentNum];
+		for (int j = 0; j < data.rowMeta.size(); j++) {
+			Integer newPos = data.rowMapping.get(j);
+			outputRow[newPos] = incomingRow[j];
+		}
 
 		// put the row to the output row stream
-		putRow(data.outputRowMeta, outputRow); 
+		putRow(data.outputRowMeta, outputRow);
 
 		// log progress if it is time to to so
 		if (checkFeedback(getLinesRead())) {
@@ -156,6 +188,19 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		// indicate that processRow() should be called again
 		return true;
+	}
+
+	private Object[] getOneRow(StreamSchemaStepData data) throws KettleException {
+		Object[] input = getRowFrom( data.currentRowSet );
+		if ( input == null ) {
+			if ( data.currentNum < data.numSteps - 1 ) {
+				// read rows from the next step
+				data.currentNum++;
+				data.currentRowSet = data.rowSets[data.currentNum];
+				input = getRowFrom( data.currentRowSet );
+			}
+		}
+		return input;
 	}
 
 	/**
@@ -177,6 +222,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		// Casting to step-specific implementation classes is safe
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
+
+        data.infoStreams = null;
+        data.rowSets = null;
+        data.rowMetas = null;
+        data.mapping = null;
+        data.currentRowSet = null;
+        data.rowMapping = null;
+        data.r = null;
 		
 		super.dispose(meta, data);
 	}

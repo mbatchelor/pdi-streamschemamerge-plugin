@@ -37,11 +37,18 @@ import org.pentaho.di.core.Const;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.errorhandling.Stream;
+import org.pentaho.di.trans.step.errorhandling.StreamIcon;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
+import org.pentaho.di.trans.steps.multimerge.MultiMergeJoinMeta;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is part of the demo step plug-in implementation.
@@ -332,6 +339,38 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		// close the SWT dialog window
 		dispose();
 	}
+
+    private void getMeta(String[] inputSteps) {
+        List<StreamInterface> infoStreams = meta.getStepIOMeta().getInfoStreams();
+
+        if ( infoStreams.size() == 0 || inputSteps.length < infoStreams.size()) {
+            if ( inputSteps.length != 0 ) {
+                meta.wipeStepIoMeta();
+                for (String inputStep : inputSteps) {
+                    meta.getStepIOMeta().addStream(
+                            new Stream(StreamInterface.StreamType.INFO, null, "", StreamIcon.INFO, null));
+                }
+                infoStreams = meta.getStepIOMeta().getInfoStreams();
+            }
+        } else if ( infoStreams.size() < inputSteps.length ) {
+            int requiredStreams = inputSteps.length - infoStreams.size();
+
+            for ( int i = 0; i < requiredStreams; i++ ) {
+                meta.getStepIOMeta().addStream(
+                        new Stream( StreamInterface.StreamType.INFO, null, "", StreamIcon.INFO, null ) );
+            }
+            infoStreams = meta.getStepIOMeta().getInfoStreams();
+        }
+        int streamCount = infoStreams.size();
+
+        String[] stepsToMerge = meta.getStepsToMerge();
+        for ( int i = 0; i < streamCount; i++ ) {
+            String step = stepsToMerge[i];
+            StreamInterface infoStream = infoStreams.get( i );
+            infoStream.setStepMeta( transMeta.findStep( step ) );
+            infoStream.setSubject(step);
+        }
+    }
 	
 	/**
 	 * Called when the user confirms the dialog
@@ -354,6 +393,7 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
             }
         }
         meta.setStepsToMerge(stepNames);
+		getMeta(stepNames);
 
 		// close the SWT dialog window
 		dispose();
