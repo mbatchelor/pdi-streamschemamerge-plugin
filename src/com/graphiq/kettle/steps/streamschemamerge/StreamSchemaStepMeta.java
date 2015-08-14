@@ -90,9 +90,9 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	private static Class<?> PKG = com.graphiq.kettle.steps.streamschemamerge.StreamSchemaStepMeta.class; // for i18n purposes
 	
 	/**
-	 * Stores the name of the field added to the row-stream. 
+	 * Stores the type of stream schema merge to use
 	 */
-	private String outputField;
+	private String mergeType;
 
     /**
      * Stores the names of the steps to
@@ -155,23 +155,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 * to sensible defaults. The values set here will be used by Spoon when a new step is created.    
 	 */
 	public void setDefault() {
-		outputField = "demo_field";
-	}
-	
-	/**
-	 * Getter for the name of the field added by this step
-	 * @return the name of the field added
-	 */
-	public String getOutputField() {
-		return outputField;
-	}
-
-	/**
-	 * Setter for the name of the field added by this step
-	 * @param outputField the name of the field added
-	 */
-	public void setOutputField(String outputField) {
-		this.outputField = outputField;
+		mergeType = "UNION";
 	}
 
     /**
@@ -225,9 +209,9 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	public String getXML() throws KettleValueException {
 		StringBuilder xml = new StringBuilder();
-		xml.append("    <outputfield>" + Const.CR);
-        xml.append("        " + XMLHandler.addTagValue("outputfield", outputField));
-        xml.append("    </outputfield>" + Const.CR);
+		xml.append("    <mergeType>" + Const.CR);
+        xml.append("        " + XMLHandler.addTagValue("mergeType", mergeType));
+        xml.append("    </mergeType>" + Const.CR);
         xml.append( "    <steps>" + Const.CR );
         for (String stepName : stepsToMerge) {
             xml.append( "      <step>" + Const.CR );
@@ -257,7 +241,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
     private void readData( Node stepnode) throws KettleXMLException {
         try {
             //TODO put the strings in a config file or make constants in this file
-            outputField = XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "outputfield"));
+            mergeType = XMLHandler.getNodeValue(XMLHandler.getSubNode(stepnode, "mergeType"));
             Node steps = XMLHandler.getSubNode( stepnode, "steps" );
             int nrsteps = XMLHandler.countNodes( steps, "step" );
 
@@ -292,7 +276,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public void saveRep(Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step) throws KettleException
 	{
 		try{
-			rep.saveStepAttribute(id_transformation, id_step, "outputfield", outputField); //$NON-NLS-1$
+			rep.saveStepAttribute(id_transformation, id_step, "mergeType", mergeType); //$NON-NLS-1$
 		}
 		catch(Exception e){
 			throw new KettleException("Unable to save step into repository: "+id_step, e); 
@@ -310,7 +294,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	public void readRep(Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases) throws KettleException  {
 		try{
-			outputField  = rep.getStepAttributeString(id_step, "outputfield"); //$NON-NLS-1$
+			mergeType  = rep.getStepAttributeString(id_step, "mergeType"); //$NON-NLS-1$
 		}
 		catch(Exception e){
 			throw new KettleException("Unable to load step from repository", e);

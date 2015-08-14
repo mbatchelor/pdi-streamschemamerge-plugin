@@ -40,14 +40,12 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.errorhandling.Stream;
 import org.pentaho.di.trans.step.errorhandling.StreamIcon;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
-import org.pentaho.di.trans.steps.multimerge.MultiMergeJoinMeta;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -82,7 +80,6 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 	private String[] previousSteps;  // steps sending data in to this step
 
 	// text field holding the name of the field to add to the row stream
-	private Text wHelloFieldName;
 	private Label wlSteps;
 	private TableView wSteps;
 	private FormData fdlSteps, fdSteps;
@@ -183,32 +180,13 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 
         setButtonPositions(new Button[]{wOK, wGet, wCancel}, margin, null);
 
-		// output field value
-		Label wlValName = new Label(shell, SWT.RIGHT);
-		wlValName.setText(BaseMessages.getString(PKG, "StreamSchemaStepDialog.FieldName.Label"));
-		props.setLook(wlValName);
-		FormData fdlValName = new FormData();
-		fdlValName.left = new FormAttachment(0, 0);
-		fdlValName.right = new FormAttachment(middle, -margin);
-		fdlValName.top = new FormAttachment(wStepname, margin);
-		wlValName.setLayoutData(fdlValName);
-
-		wHelloFieldName = new Text(shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-		props.setLook(wHelloFieldName);
-		wHelloFieldName.addModifyListener(lsMod);
-		FormData fdValName = new FormData();
-		fdValName.left = new FormAttachment(middle, 0);
-		fdValName.right = new FormAttachment(100, 0);
-		fdValName.top = new FormAttachment(wStepname, margin);
-		wHelloFieldName.setLayoutData(fdValName);
-
 		// Table with fields
 		wlSteps = new Label( shell, SWT.NONE );
 		wlSteps.setText(BaseMessages.getString(PKG, "StreamSchemaStepDialog.Steps.Label"));
 		props.setLook(wlSteps);
 		fdlSteps = new FormData();
 		fdlSteps.left = new FormAttachment( 0, 0 );
-		fdlSteps.top = new FormAttachment( wHelloFieldName, margin );
+		fdlSteps.top = new FormAttachment( wStepname, margin );
 		wlSteps.setLayoutData(fdlSteps);
 
 		final int FieldsCols = 1;
@@ -255,7 +233,6 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 			public void widgetDefaultSelected(SelectionEvent e) {ok();}
 		};
 		wStepname.addSelectionListener(lsDef);
-		wHelloFieldName.addSelectionListener(lsDef);
 
 		// Detect X or ALT-F4 or something that kills this window and cancel the dialog properly
 		shell.addShellListener(new ShellAdapter() {
@@ -289,8 +266,6 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 	 * and puts it into the dialog controls.
 	 */
     private void populateDialog() {
-		wHelloFieldName.setText(meta.getOutputField());
-
         Table table = wSteps.table;
         if ( meta.getNumberOfSteps() > 0 ) {
             table.removeAll();
@@ -380,7 +355,6 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		// Setting to step name from the dialog control
 		stepname = wStepname.getText(); 
 		// set output field name
-		meta.setOutputField(wHelloFieldName.getText());
 
         // TODO eliminate copying here and copying when placed in meta
         int nrsteps = wSteps.nrNonEmpty();
