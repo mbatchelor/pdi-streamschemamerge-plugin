@@ -51,7 +51,7 @@ public class SchemaMapper {
             }
             mapping.put(i, rowMapping);
         }
-        row = base.clone();
+        row = base;
     }
 
     public LinkedHashMap<Integer, HashMap<Integer, Integer>> getMapping() {
