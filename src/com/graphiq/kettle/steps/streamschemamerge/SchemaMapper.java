@@ -29,7 +29,6 @@ public class SchemaMapper {
      */
 
     public SchemaMapper(RowMetaInterface info[], SchemaMergeType type) {
-        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length, 1);  // default load factor of 1
         switch (type) {
             case UNION:
                 unionMerge(info);
@@ -44,7 +43,7 @@ public class SchemaMapper {
      */
     private void unionMerge(RowMetaInterface info[]) {
         // setup
-        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length, 1);  // default load factor of 1
+        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length);  // default load factor of 1
         RowMetaInterface base = info[0].clone();  // base could be set in step
         HashSet<String> fieldNames = new HashSet<String>();  // might use searchValueMeta instead
         String[] fields = base.getFieldNames();
