@@ -35,8 +35,7 @@ public class SchemaMapper {
         mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length);  // default load factor of 1
         RowMetaInterface base = info[0].clone();  // base could be set in step
         HashSet<String> fieldNames = new HashSet<String>();  // might use searchValueMeta instead
-        String[] fields = base.getFieldNames();
-        Collections.addAll(fieldNames, fields);
+        Collections.addAll(fieldNames, base.getFieldNames());
         // merge
         for (int i = 0; i < info.length; i++) {
             HashMap<Integer, Integer> rowMapping = new HashMap<Integer, Integer>(info[i].size(), 1);
