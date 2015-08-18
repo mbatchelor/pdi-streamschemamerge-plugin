@@ -37,14 +37,11 @@ import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
-import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
-import org.pentaho.di.shared.SharedObjectInterface;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.*;
@@ -257,7 +254,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
                 Node fnode = XMLHandler.getSubNodeByNr( steps, "step", i );
                 String name = XMLHandler.getTagValue(fnode, "name");
                 stepsToMerge.add(name);
-                infoStreams.get( i ).setSubject(name);
+                infoStreams.get(i).setSubject(name);
             }
         } catch ( Exception e ) {
             throw new KettleXMLException( "Unable to load step info from XML", e );
@@ -320,7 +317,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 		/*
 		 * We don't have any input fields so we ingore inputRowMeta
 		 */
-        SchemaMapper tMapping = new SchemaMapper(info, SchemaMapper.SchemaMergeType.UNION);
+        SchemaMapper tMapping = new SchemaMapper(info);
         RowMetaInterface base = tMapping.getRow();
 
         for ( int i = 0; i < base.size(); i++ ) {

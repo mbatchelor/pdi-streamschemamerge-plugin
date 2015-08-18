@@ -19,23 +19,12 @@ public class SchemaMapper {
     RowMetaInterface row;  // resolved row meta
     LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
 
-    public enum SchemaMergeType {
-        UNION, INTERSECT, CONFORM
-    }
-
-
     /*
      * Constructors
      */
 
-    public SchemaMapper(RowMetaInterface info[], SchemaMergeType type) {
-        switch (type) {
-            case UNION:
-                unionMerge(info);
-                break;
-            default:
-                throw new IllegalArgumentException("Incorrect SchemaMergeType must be from enum choices");
-        }
+    public SchemaMapper(RowMetaInterface info[]) {
+        unionMerge(info);
     }
 
     /*

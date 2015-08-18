@@ -148,7 +148,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 				}
 				i++;
 			}
-			data.tMapping = new SchemaMapper(data.rowMetas, SchemaMapper.SchemaMergeType.UNION);
+			data.tMapping = new SchemaMapper(data.rowMetas);
 			data.mapping = data.tMapping.getMapping();
 			data.outputRowMeta = data.tMapping.getRow();
 			data.currentRowSet = data.rowSets[0];  // get first row set
