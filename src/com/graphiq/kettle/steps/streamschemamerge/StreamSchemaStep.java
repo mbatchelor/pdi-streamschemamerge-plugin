@@ -33,7 +33,6 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
-import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,7 +44,7 @@ import java.util.Collections;
  * type will be taken from the first occurrence of a field.
  *
  * Because this step combines multiple streams with different RowMetas together, it is deemed "not safe" and will fail
- * if you try to run the transformation with the "Enable Safe Mode checked".
+ * if you try to run the transformation with the "Enable Safe Mode checked". Therefore it disables safe mode
  *
  * @author aoverton
  * @since 18-aug-2015
@@ -64,7 +63,8 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	 * @param dis				transformation executing
 	 */
 	public StreamSchemaStep(StepMeta s, StepDataInterface stepDataInterface, int c, TransMeta t, Trans dis) {
-		super(s, stepDataInterface, c, t, dis);
+        super(s, stepDataInterface, c, t, dis);
+        dis.setSafeModeEnabled(false);  // safe mode is incomapitable with this step
 	}
 
 	/**
@@ -80,7 +80,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		// Casting to step-specific implementation classes is safe
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
-
 
 		data.infoStreams = meta.getStepIOMeta().getInfoStreams();
 		data.numSteps = data.infoStreams.size();
