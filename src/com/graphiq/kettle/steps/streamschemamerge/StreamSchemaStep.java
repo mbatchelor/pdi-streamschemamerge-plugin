@@ -172,4 +172,31 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		return true;
 	}
 
+    /**
+     * Clear steps from step data
+     * @param smi the step meta interface containing the step settings
+     * @param sdi the step data interface that should be used to store
+     */
+    public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
+
+        // Casting to step-specific implementation classes is safe
+        StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
+        StreamSchemaStepData data = (StreamSchemaStepData) sdi;
+
+        data.outputRowMeta = null;
+        data.inRowMeta = null;
+        data.schemaMapping = null;
+        data.infoStreams = null;
+        data.rowSets = null;
+        data.rowMetas = null;
+        data.rowMetaList = null;
+        data.mapping = null;
+        data.currentName = null;
+        data.rowMapping = null;
+        data.stepNames = null;
+        data.r = null;
+
+        super.dispose(meta, data);
+    }
+
 }
