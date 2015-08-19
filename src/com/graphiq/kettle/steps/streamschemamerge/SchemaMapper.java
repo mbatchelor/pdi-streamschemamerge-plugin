@@ -58,7 +58,7 @@ public class SchemaMapper {
         return mapping;
     }
 
-    public RowMetaInterface getRow() {
+    public RowMetaInterface getRowMeta() {
         return row;
     }
 

@@ -100,9 +100,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.infoStreams = meta.getStepIOMeta().getInfoStreams();
 		data.numSteps = data.infoStreams.size();
 		data.rowMetas = new RowMetaInterface[data.numSteps];
-		data.rowMetas2 = new ArrayList<RowMetaInterface>();
-		data.rowSets = new RowSet[data.numSteps];
-		data.rowSets2 = new ArrayList<RowSet>();
+		data.rowMetaList = new ArrayList<RowMetaInterface>();
+		data.rowSets = new ArrayList<RowSet>();
+        data.stepNames = new String[data.numSteps];
 
 		return super.init(meta, data);
 	}
@@ -136,24 +136,28 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		if (first) {
 			first = false;
 
-			int i = 0;
-			for (StreamInterface ignore : data.infoStreams) {
-				data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
-				data.rowSets[i] = data.r;
+//			int i = 0;
+            for (int i = 0; i < data.infoStreams.size(); i++) {
+                data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
+                data.rowSets.add(data.r);
+                data.stepNames[i] = data.r.getName();
                 // Avoids race condition. Row metas are not available until the previous steps have called
                 // putRowWait at least once
-				while (data.rowMetas[i] == null && !isStopped()) {
-					data.rowMetas[i] = data.r.getRowMeta();
-				}
-				i++;
-			}
+                while (data.rowMetas[i] == null && !isStopped()) {
+                    data.rowMetas[i] = data.r.getRowMeta();
+                }
+            }
+//			for (StreamInterface ignore : data.infoStreams) {
+//
+//				i++;
+//			}
 
-			data.tMapping = new SchemaMapper(data.rowMetas);
-			data.mapping = data.tMapping.getMapping();
-			data.outputRowMeta = data.tMapping.getRow();
-			Collections.addAll(data.rowMetas2, data.rowMetas);
-			Collections.addAll(data.rowSets2, data.rowSets);
-			setInputRowSets(data.rowSets2);
+			data.schemaMapping = new SchemaMapper(data.rowMetas);
+			data.mapping = data.schemaMapping.getMapping();
+			data.outputRowMeta = data.schemaMapping.getRowMeta();
+			Collections.addAll(data.rowMetaList, data.rowMetas);
+			setInputRowSets(data.rowSets);
+
 
 		}
 
@@ -165,11 +169,11 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-		data.currentRowSetNum = getCurrentInputRowSetNr();
+//		data.currentRowSetNum = getCurrentInputRowSetNr();
 		data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
-		for (int i = 0; i < data.rowSets.length; i++) {
-			if (data.rowSets[i].getName().equals(data.currentName)) {
-				data.correspondingNum = i;
+		for (int i = 0; i < data.stepNames.length; i++) {
+			if (data.stepNames[i].equals(data.currentName)) {
+				data.streamNum = i;
 				break;
 			}
 		}
@@ -177,12 +181,11 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
 
-		data.rowMapping = data.mapping.get(data.correspondingNum);
-		data.rowMeta = data.rowMetas2.get(data.correspondingNum);
-		for (int j = 0; j < data.rowMeta.size(); j++) {
+		data.rowMapping = data.mapping.get(data.streamNum);
+		data.inRowMeta = data.rowMetaList.get(data.streamNum);
+		for (int j = 0; j < data.inRowMeta.size(); j++) {
             Integer newPos = data.rowMapping.get(j);
 			outputRow[newPos] = incomingRow[j];
-
 		}
 
 		// put the row to the output row stream

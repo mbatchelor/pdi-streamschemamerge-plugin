@@ -54,34 +54,32 @@ import java.util.List;
  */
 public class StreamSchemaStepData extends BaseStepData implements StepDataInterface {
 
-	public RowMetaInterface outputRowMeta;
+	public RowMetaInterface outputRowMeta, inRowMeta;
 
 	public StreamSchemaStepData()
 	{
 		super();
 	}
 
-	public SchemaMapper tMapping;
+	public SchemaMapper schemaMapping;
 
 	public List<StreamInterface> infoStreams;
 
-	public RowSet[] rowSets;
-
-	public List<RowSet> rowSets2;
+	public List<RowSet> rowSets;
 
 	public RowMetaInterface[] rowMetas;
 
-	public List<RowMetaInterface> rowMetas2;
+	public List<RowMetaInterface> rowMetaList;
 
 	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
 
-	public int numSteps, currentRowSetNum, correspondingNum;
+	public int numSteps, streamNum;
 
 	public String currentName;
 
 	public HashMap<Integer, Integer> rowMapping;
 
-	public RowMetaInterface rowMeta;
+	public String[] stepNames;
 
 	public RowSet r;
 }

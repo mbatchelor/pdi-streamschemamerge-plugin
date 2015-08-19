@@ -318,7 +318,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 		 * We don't have any input fields so we ingore inputRowMeta
 		 */
         SchemaMapper tMapping = new SchemaMapper(info);
-        RowMetaInterface base = tMapping.getRow();
+        RowMetaInterface base = tMapping.getRowMeta();
 
         for ( int i = 0; i < base.size(); i++ ) {
             base.getValueMeta( i ).setOrigin( name );
