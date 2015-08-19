@@ -35,28 +35,28 @@ import java.util.List;
 /**
  * This class is part of the demo step plug-in implementation.
  * It demonstrates the basics of developing a plug-in step for PDI. 
- * 
+ *
  * The demo step adds a new string field to the row stream and sets its
  * value to "Hello World!". The user may select the name of the new field.
- *   
+ *
  * This class is the implementation of StepDataInterface.
- *   
+ *
  * Implementing classes inherit from BaseStepData, which implements the entire
  * interface completely. 
- * 
+ *
  * In addition classes implementing this interface usually keep track of
  * per-thread resources during step execution. Typical examples are:
  * result sets, temporary data, caching indexes, etc.
- *   
+ *
  * The implementation for the demo step stores the output row structure in 
  * the data class. 
- *   
+ *
  */
 public class StreamSchemaStepData extends BaseStepData implements StepDataInterface {
 
 	public RowMetaInterface outputRowMeta;
-	
-    public StreamSchemaStepData()
+
+	public StreamSchemaStepData()
 	{
 		super();
 	}
@@ -67,18 +67,22 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
 	public RowSet[] rowSets;
 
+	public List<RowSet> rowSets2;
+
 	public RowMetaInterface[] rowMetas;
+
+	public List<RowMetaInterface> rowMetas2;
 
 	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
 
-	public int numSteps, currentNum;
+	public int numSteps, currentRowSetNum, correspondingNum;
 
-	public RowSet currentRowSet;
+	public String currentName;
 
-	HashMap<Integer, Integer> rowMapping;
+	public HashMap<Integer, Integer> rowMapping;
 
-	RowMetaInterface rowMeta;
+	public RowMetaInterface rowMeta;
 
-	RowSet r;
+	public RowSet r;
 }
 	
