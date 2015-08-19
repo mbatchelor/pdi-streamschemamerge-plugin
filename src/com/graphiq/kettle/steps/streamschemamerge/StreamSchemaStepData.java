@@ -28,8 +28,8 @@ import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -52,15 +52,13 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
 	public RowMetaInterface[] rowMetas;  // a list of row meta information for incoming rows
 
-	public List<RowMetaInterface> rowMetaList;  // same as row meta, but stored as a list
-
-	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;  // mappings for all incoming rows
+	public int[][] mapping;  // mappings for all incoming rows
 
 	public int numSteps, streamNum;  // incoming steps and what stream the current row is from
 
 	public String currentName;  // name of the rowset that sent the current row
 
-	public HashMap<Integer, Integer> rowMapping;  // row mapping for the current row
+	public int[] rowMapping;  // row mapping for the current row
 
 	public String[] stepNames;  // rowset names for incoming rowsets
 

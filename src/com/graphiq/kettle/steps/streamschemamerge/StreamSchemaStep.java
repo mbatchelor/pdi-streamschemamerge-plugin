@@ -35,7 +35,6 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
@@ -84,7 +83,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.infoStreams = meta.getStepIOMeta().getInfoStreams();
 		data.numSteps = data.infoStreams.size();
 		data.rowMetas = new RowMetaInterface[data.numSteps];
-		data.rowMetaList = new ArrayList<RowMetaInterface>();
 		data.rowSets = new ArrayList<RowSet>();
         data.stepNames = new String[data.numSteps];
 
@@ -125,7 +123,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			data.schemaMapping = new SchemaMapper(data.rowMetas);  // creates mapping and master output row
 			data.mapping = data.schemaMapping.getMapping();
 			data.outputRowMeta = data.schemaMapping.getRowMeta();
-			Collections.addAll(data.rowMetaList, data.rowMetas);
 			setInputRowSets(data.rowSets);  // set the order of the inputrowsets to match the order we've defined
             if (isDetailed()) {
                 logDetailed("Finished generating mapping");
@@ -159,10 +156,10 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
         // create a new (empty) output row in the model of the master outputer row
 		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
 
-		data.rowMapping = data.mapping.get(data.streamNum);  // set appropriate row mapping
-		data.inRowMeta = data.rowMetaList.get(data.streamNum);  // set appropriate meta for incoming row
+		data.rowMapping = data.mapping[data.streamNum];  // set appropriate row mapping
+		data.inRowMeta = data.rowMetas[data.streamNum];  // set appropriate meta for incoming row
 		for (int j = 0; j < data.inRowMeta.size(); j++) {
-            Integer newPos = data.rowMapping.get(j);
+            int newPos = data.rowMapping[j];
 			outputRow[newPos] = incomingRow[j];  // map a fields old position to its new position
 		}
 
@@ -195,7 +192,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
         data.infoStreams = null;
         data.rowSets = null;
         data.rowMetas = null;
-        data.rowMetaList = null;
         data.mapping = null;
         data.currentName = null;
         data.rowMapping = null;

@@ -3,17 +3,14 @@ package com.graphiq.kettle.steps.streamschemamerge;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.*;
 
 /**
  * Takes in RowMetas and find the union of them. Then maps the field of each row to its final destination
  */
 public class SchemaMapper {
     RowMetaInterface row;  // resolved row meta
-    LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
+    int[][] mapping;
 
     public SchemaMapper(RowMetaInterface info[]) {
         unionMerge(info);
@@ -26,25 +23,24 @@ public class SchemaMapper {
      */
     private void unionMerge(RowMetaInterface info[]) {
         // do set up
-        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length);
+        mapping = new int[info.length][];
         RowMetaInterface base = info[0].clone();
         HashSet<String> fieldNames = new HashSet<String>();
         Collections.addAll(fieldNames, base.getFieldNames());
 
         // do merge
         for (int i = 0; i < info.length; i++) {
-            HashMap<Integer, Integer> rowMapping = new HashMap<Integer, Integer>(info[i].size(), 1);
-            int size = info[i].size();
-            for (int x = 0; x < size; x++) {
+            int[] rowMapping = new int[info[i].size()];
+            for (int x = 0; x < rowMapping.length; x++) {
                 ValueMetaInterface field = info[i].getValueMeta(x);
                 String name = field.getName();
                 if (!fieldNames.contains(name)) {
                     base.addValueMeta(field);
                     fieldNames.add(name);
                 }
-                rowMapping.put(x, base.indexOfValue(name));  // update mapping for this field
+                rowMapping[x] = base.indexOfValue(name);  // update mapping for this field
             }
-            mapping.put(i, rowMapping);  // save the mapping for this rowMeta
+            mapping[i] = rowMapping;  // save the mapping for this rowMeta
         }
         row = base;  // set our master output row
     }
@@ -53,7 +49,7 @@ public class SchemaMapper {
      * Get mappings for all rows
      * @return mappings from all input rows to the output row format
      */
-    public LinkedHashMap<Integer, HashMap<Integer, Integer>> getMapping() {
+    public int[][] getMapping() {
         return mapping;
     }
 
