@@ -127,7 +127,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			data.outputRowMeta = data.schemaMapping.getRowMeta();
 			Collections.addAll(data.rowMetaList, data.rowMetas);
 			setInputRowSets(data.rowSets);  // set the order of the inputrowsets to match the order we've defined
-
+            if (isDetailed()) {
+                logDetailed("Finished generating mapping");
+            }
 
 		}
 
@@ -149,6 +151,10 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 				break;
 			}
 		}
+        if (isRowLevel()) {
+            logRowlevel(String.format("Current row from %s. This maps to stream number %d", data.currentName,
+                    data.streamNum));
+        }
 
         // create a new (empty) output row in the model of the master outputer row
 		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
