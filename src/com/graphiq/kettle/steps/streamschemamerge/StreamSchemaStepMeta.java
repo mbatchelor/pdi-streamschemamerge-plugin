@@ -51,23 +51,6 @@ import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.metastore.api.IMetaStore;
 import org.w3c.dom.Node;
 
-/**
- * This class is part of the demo step plug-in implementation.
- * It demonstrates the basics of developing a plug-in step for PDI. 
- * 
- * The demo step adds a new string field to the row stream and sets its
- * value to "Hello World!". The user may select the name of the new field.
- *   
- * This class is the implementation of StepMetaInterface.
- * Classes implementing this interface need to:
- * 
- * - keep track of the step settings
- * - serialize step settings both to xml and a repository
- * - provide new instances of objects implementing StepDialogInterface, StepInterface and StepDataInterface
- * - report on how the step modifies the meta-data of the row-stream (row structure and field types)
- * - perform a sanity-check on the settings provided by the user 
- * 
- */
 
 @Step(	
 		id = "StreamSchemaStep",
@@ -79,11 +62,6 @@ import org.w3c.dom.Node;
 )
 public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterface {
 
-	/**
-	 *	The PKG member is used when looking up internationalized strings.
-	 *	The properties file with localized keys is expected to reside in 
-	 *	{the package of the class specified}/messages/messages_{locale}.properties   
-	 */
 	private static Class<?> PKG = com.graphiq.kettle.steps.streamschemamerge.StreamSchemaStepMeta.class; // for i18n purposes
 	
 	/**
@@ -92,7 +70,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	private String mergeType;
 
     /**
-     * Stores the names of the steps to
+     * Stores the names of the steps to merge into the output
      */
     private ArrayList<String> stepsToMerge = new ArrayList<String>();
 
@@ -104,7 +82,8 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	}
 
     /**
-     * Prevents error box from popping up when sending in different row formts
+     * Prevents error box from popping up when sending in different row formats. Note you will still get an error if
+     * you try to run the transformating in safe mode.
      * @return true
      */
     public boolean excludeFromRowLayoutVerification() {
@@ -168,6 +147,10 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 
     }
 
+    /**
+     * Determine the number of steps we're planning to merge
+     * @return number of items to merge, 0 if none
+     */
     public int getNumberOfSteps() {
         if (stepsToMerge == null) {
             return 0;
@@ -176,6 +159,10 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
         }
     }
 
+    /**
+     * Set steps to merge
+     * @param arrayOfSteps Names of steps to merge
+     */
     public void setStepsToMerge(String[] arrayOfSteps) {
         stepsToMerge = new ArrayList<String>();
         Collections.addAll(stepsToMerge, arrayOfSteps);
@@ -235,6 +222,11 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 
 	}
 
+    /**
+     * Helper methods to read in the XML
+     * @param stepnode XML node for the step
+     * @throws KettleXMLException If there is an error reading the configuration
+     */
     private void readData( Node stepnode) throws KettleXMLException {
         try {
             //TODO put the strings in a config file or make constants in this file
@@ -244,6 +236,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 
             stepsToMerge.clear();
 
+            // we need to add a stream for each step we want to merge to ensure it gets treated as an info stream
             for ( int i = 0; i < nrsteps; i++ ) {
                 getStepIOMeta().addStream(
                         new Stream( StreamInterface.StreamType.INFO, null, "Streams to Merge", StreamIcon.INFO, null ) );
@@ -317,7 +310,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 		/*
 		 * We don't have any input fields so we ingore inputRowMeta
 		 */
-        SchemaMapper tMapping = new SchemaMapper(info);
+        SchemaMapper tMapping = new SchemaMapper(info);  // compute the union of the info fields being passed in
         RowMetaInterface base = tMapping.getRowMeta();
 
         for ( int i = 0; i < base.size(); i++ ) {
@@ -331,12 +324,6 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 * This method is called when the user selects the "Verify Transformation" option in Spoon. 
 	 * A list of remarks is passed in that this method should add to. Each remark is a comment, warning, error, or ok.
 	 * The method should perform as many checks as necessary to catch design-time errors.
-	 * 
-	 * Typical checks include:
-	 * - verify that all mandatory configuration is given
-	 * - verify that the step receives any input, unless it's a row generating step
-	 * - verify that the step does not receive any input if it does not take them into account
-	 * - verify that the step finds fields it relies on in the row-stream
 	 * 
 	 *   @param remarks		the list of remarks to append to
 	 *   @param transMeta	the description of the transformation
@@ -373,6 +360,9 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
         // Do nothing, don't reset as there is no need to do this.
     }
 
+    /**
+     * Has original function of resetStepIoMeta, but we only want to call it when appropriate
+     */
 	public void wipeStepIoMeta() {
 		ioMeta = null;
 	}

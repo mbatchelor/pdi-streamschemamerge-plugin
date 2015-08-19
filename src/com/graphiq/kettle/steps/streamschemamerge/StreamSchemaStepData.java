@@ -33,54 +33,37 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
- * This class is part of the demo step plug-in implementation.
- * It demonstrates the basics of developing a plug-in step for PDI. 
- *
- * The demo step adds a new string field to the row stream and sets its
- * value to "Hello World!". The user may select the name of the new field.
- *
- * This class is the implementation of StepDataInterface.
- *
- * Implementing classes inherit from BaseStepData, which implements the entire
- * interface completely. 
- *
- * In addition classes implementing this interface usually keep track of
- * per-thread resources during step execution. Typical examples are:
- * result sets, temporary data, caching indexes, etc.
- *
- * The implementation for the demo step stores the output row structure in 
- * the data class. 
- *
+ * Holds data objects used in StreamSchemaStep
  */
 public class StreamSchemaStepData extends BaseStepData implements StepDataInterface {
 
-	public RowMetaInterface outputRowMeta, inRowMeta;
+	public RowMetaInterface outputRowMeta, inRowMeta;  // outgoing and incoming row meta
 
 	public StreamSchemaStepData()
 	{
 		super();
 	}
 
-	public SchemaMapper schemaMapping;
+	public SchemaMapper schemaMapping;  // object that does row mapping
 
-	public List<StreamInterface> infoStreams;
+	public List<StreamInterface> infoStreams;  // streams of the incoming steps
 
-	public List<RowSet> rowSets;
+	public List<RowSet> rowSets;  // a list of rowsets that are sending data to this step
 
-	public RowMetaInterface[] rowMetas;
+	public RowMetaInterface[] rowMetas;  // a list of row meta information for incoming rows
 
-	public List<RowMetaInterface> rowMetaList;
+	public List<RowMetaInterface> rowMetaList;  // same as row meta, but stored as a list
 
-	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
+	public LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;  // mappings for all incoming rows
 
-	public int numSteps, streamNum;
+	public int numSteps, streamNum;  // incoming steps and what stream the current row is from
 
-	public String currentName;
+	public String currentName;  // name of the rowset that sent the current row
 
-	public HashMap<Integer, Integer> rowMapping;
+	public HashMap<Integer, Integer> rowMapping;  // row mapping for the current row
 
-	public String[] stepNames;
+	public String[] stepNames;  // rowset names for incoming rowsets
 
-	public RowSet r;
+	public RowSet r;  // used for iterating over rowsets
 }
 	

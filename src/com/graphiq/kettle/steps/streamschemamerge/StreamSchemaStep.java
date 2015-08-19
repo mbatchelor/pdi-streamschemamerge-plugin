@@ -39,22 +39,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 /**
- * This class is part of the demo step plug-in implementation.
- * It demonstrates the basics of developing a plug-in step for PDI. 
+ * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
+ * require the incoming rows to have the same RowMeta. Instead, this step will examine the incoming rows and take the
+ * union of the set of all rows passed in. Fields that have the same name will be placed in the same field. The field
+ * type will be taken from the first occurrence of a field.
  *
- * The demo step adds a new string field to the row stream and sets its
- * value to "Hello World!". The user may select the name of the new field.
+ * Because this step combines multiple streams with different RowMetas together, it is deemed "not safe" and will fail
+ * if you try to run the transformation with the "Enable Safe Mode checked".
  *
- * This class is the implementation of StepInterface.
- * Classes implementing this interface need to:
- *
- * - initialize the step
- * - execute the row processing logic
- * - dispose of the step 
- *
- * Please do not create any local fields in a StepInterface class. Store any
- * information related to the processing logic in the supplied step data interface
- * instead.  
+ * @author aoverton
+ * @since 18-aug-2015
  *
  */
 
@@ -74,28 +68,19 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	}
 
 	/**
-	 * This method is called by PDI during transformation startup. 
-	 *
-	 * It should initialize required for step execution. 
-	 *
-	 * The meta and data implementations passed in can safely be cast
-	 * to the step's respective implementations. 
-	 *
-	 * It is mandatory that super.init() is called to ensure correct behavior.
-	 *
-	 * Typical tasks executed here are establishing the connection to a database,
-	 * as wall as obtaining resources, like file handles.
+	 * Initialize data structures that we have information for at init time
 	 *
 	 * @param smi 	step meta interface implementation, containing the step settings
 	 * @param sdi	step data interface implementation, used to store runtime information
 	 *
-	 * @return true if initialization completed successfully, false if there was an error preventing the step from working. 
+	 * @return true if initialization completed successfully, false if there was an error
 	 *
 	 */
 	public boolean init(StepMetaInterface smi, StepDataInterface sdi) {
 		// Casting to step-specific implementation classes is safe
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
+
 
 		data.infoStreams = meta.getStepIOMeta().getInfoStreams();
 		data.numSteps = data.infoStreams.size();
@@ -108,20 +93,8 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	}
 
 	/**
-	 * Once the transformation starts executing, the processRow() method is called repeatedly
-	 * by PDI for as long as it returns true. To indicate that a step has finished processing rows
-	 * this method must call setOutputDone() and return false;
-	 *
-	 * Steps which process incoming rows typically call getRow() to read a single row from the
-	 * input stream, change or add row content, call putRow() to pass the changed row on 
-	 * and return true. If getRow() returns null, no more rows are expected to come in, 
-	 * and the processRow() implementation calls setOutputDone() and returns false to
-	 * indicate that it is done too.
-	 *
-	 * Steps which generate rows typically construct a new row Object[] using a call to
-	 * RowDataUtil.allocateRowData(numberOfFields), add row content, and call putRow() to
-	 * pass the new row on. Above process may happen in a loop to generate multiple rows,
-	 * at the end of which processRow() would call setOutputDone() and return false;
+	 * For each row, create a new output row in the model of the master output row and copy the data values in to the
+     * appropriate indexes
 	 *
 	 * @param smi the step meta interface containing the step settings
 	 * @param sdi the step data interface that should be used to store
@@ -133,10 +106,12 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
+        /*
+         * Code in first method is responsible for finishing the initialization that we couldn't do earlier
+         */
 		if (first) {
 			first = false;
 
-//			int i = 0;
             for (int i = 0; i < data.infoStreams.size(); i++) {
                 data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
                 data.rowSets.add(data.r);
@@ -147,21 +122,17 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                     data.rowMetas[i] = data.r.getRowMeta();
                 }
             }
-//			for (StreamInterface ignore : data.infoStreams) {
-//
-//				i++;
-//			}
 
-			data.schemaMapping = new SchemaMapper(data.rowMetas);
+			data.schemaMapping = new SchemaMapper(data.rowMetas);  // creates mapping and master output row
 			data.mapping = data.schemaMapping.getMapping();
 			data.outputRowMeta = data.schemaMapping.getRowMeta();
 			Collections.addAll(data.rowMetaList, data.rowMetas);
-			setInputRowSets(data.rowSets);
+			setInputRowSets(data.rowSets);  // set the order of the inputrowsets to match the order we've defined
 
 
 		}
 
-		Object[] incomingRow = getRow();
+		Object[] incomingRow = getRow();  // get the next available row
 
 		// if no more rows are expected, indicate step is finished and processRow() should not be called again
 		if (incomingRow == null){
@@ -169,8 +140,10 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-//		data.currentRowSetNum = getCurrentInputRowSetNr();
+        // get the name of the step that the current rowset is coming from
 		data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
+        // because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
+        // need to use the name to find the proper index for our lookups later
 		for (int i = 0; i < data.stepNames.length; i++) {
 			if (data.stepNames[i].equals(data.currentName)) {
 				data.streamNum = i;
@@ -178,14 +151,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			}
 		}
 
-
+        // create a new (empty) output row in the model of the master outputer row
 		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
 
-		data.rowMapping = data.mapping.get(data.streamNum);
-		data.inRowMeta = data.rowMetaList.get(data.streamNum);
+		data.rowMapping = data.mapping.get(data.streamNum);  // set appropriate row mapping
+		data.inRowMeta = data.rowMetaList.get(data.streamNum);  // set appropriate meta for incoming row
 		for (int j = 0; j < data.inRowMeta.size(); j++) {
             Integer newPos = data.rowMapping.get(j);
-			outputRow[newPos] = incomingRow[j];
+			outputRow[newPos] = incomingRow[j];  // map a fields old position to its new position
 		}
 
 		// put the row to the output row stream

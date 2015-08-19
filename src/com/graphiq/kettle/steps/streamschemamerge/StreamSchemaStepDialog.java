@@ -48,28 +48,9 @@ import org.pentaho.di.trans.step.StepDialogInterface;
 
 import java.util.List;
 
-/**
- * This class is part of the demo step plug-in implementation.
- * It demonstrates the basics of developing a plug-in step for PDI. 
- * 
- * The demo step adds a new string field to the row stream and sets its
- * value to "Hello World!". The user may select the name of the new field.
- *   
- * This class is the implementation of StepDialogInterface.
- * Classes implementing this interface need to:
- * 
- * - build and open a SWT dialog displaying the step's settings (stored in the step's meta object)
- * - write back any changes the user makes to the step's meta object
- * - report whether the user changed any settings when confirming the dialog 
- * 
- */
+
 public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialogInterface {
 
-	/**
-	 *	The PKG member is used when looking up internationalized strings.
-	 *	The properties file with localized keys is expected to reside in 
-	 *	{the package of the class specified}/messages/messages_{locale}.properties   
-	 */
 	private static Class<?> PKG = StreamSchemaStepMeta.class; // for i18n purposes
 
 	// this is the object the stores the step's settings
@@ -180,7 +161,7 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 
         setButtonPositions(new Button[]{wOK, wGet, wCancel}, margin, null);
 
-		// Table with fields
+		// Table with fields for inputting step names
 		wlSteps = new Label( shell, SWT.NONE );
 		wlSteps.setText(BaseMessages.getString(PKG, "StreamSchemaStepDialog.Steps.Label"));
 		props.setLook(wlSteps);
@@ -287,6 +268,9 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
         wStepname.setFocus();
 	}
 
+    /**
+     * Populates the table with a list of fields that have incoming hops
+     */
     private void get() {
         wSteps.removeAll();
         Table table = wSteps.table;
@@ -315,6 +299,10 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
 		dispose();
 	}
 
+    /**
+     * Helping method to update meta information when ok is selected
+     * @param inputSteps Names of the steps that are being merged together
+     */
     private void getMeta(String[] inputSteps) {
         List<StreamInterface> infoStreams = meta.getStepIOMeta().getInfoStreams();
 

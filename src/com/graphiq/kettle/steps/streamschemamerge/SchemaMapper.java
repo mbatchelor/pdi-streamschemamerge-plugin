@@ -9,34 +9,29 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 
 /**
- * Created by aoverton on 8/12/15.
+ * Takes in RowMetas and find the union of them. Then maps the field of each row to its final destination
  */
 public class SchemaMapper {
-    /*
-     * Instance Variables
-     */
-
     RowMetaInterface row;  // resolved row meta
     LinkedHashMap<Integer, HashMap<Integer, Integer>> mapping;
-
-    /*
-     * Constructors
-     */
 
     public SchemaMapper(RowMetaInterface info[]) {
         unionMerge(info);
     }
 
-    /*
-     * Methods
+    /**
+     * Given RowMetas find the union of all of them. Create a mapping along the way so we know how to move the fields
+     * into their appropriate place
+     * @param info row metas for the fields to merge
      */
     private void unionMerge(RowMetaInterface info[]) {
-        // setup
-        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length);  // default load factor of 1
-        RowMetaInterface base = info[0].clone();  // base could be set in step
-        HashSet<String> fieldNames = new HashSet<String>();  // might use searchValueMeta instead
+        // do set up
+        mapping = new LinkedHashMap<Integer, HashMap<Integer, Integer>>(info.length);
+        RowMetaInterface base = info[0].clone();
+        HashSet<String> fieldNames = new HashSet<String>();
         Collections.addAll(fieldNames, base.getFieldNames());
-        // merge
+
+        // do merge
         for (int i = 0; i < info.length; i++) {
             HashMap<Integer, Integer> rowMapping = new HashMap<Integer, Integer>(info[i].size(), 1);
             int size = info[i].size();
@@ -47,17 +42,25 @@ public class SchemaMapper {
                     base.addValueMeta(field);
                     fieldNames.add(name);
                 }
-                rowMapping.put(x, base.indexOfValue(name));
+                rowMapping.put(x, base.indexOfValue(name));  // update mapping for this field
             }
-            mapping.put(i, rowMapping);
+            mapping.put(i, rowMapping);  // save the mapping for this rowMeta
         }
-        row = base;
+        row = base;  // set our master output row
     }
 
+    /**
+     * Get mappings for all rows
+     * @return mappings from all input rows to the output row format
+     */
     public LinkedHashMap<Integer, HashMap<Integer, Integer>> getMapping() {
         return mapping;
     }
 
+    /**
+     * Get master output row
+     * @return row meta for union of all output rows
+     */
     public RowMetaInterface getRowMeta() {
         return row;
     }
