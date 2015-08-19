@@ -172,28 +172,4 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		return true;
 	}
 
-
-	/**
-	 * This method is called by PDI once the step is done processing. 
-	 *
-	 * The dispose() method is the counterpart to init() and should release any resources
-	 * acquired for step execution like file handles or database connections.
-	 *
-	 * The meta and data implementations passed in can safely be cast
-	 * to the step's respective implementations. 
-	 *
-	 * It is mandatory that super.dispose() is called to ensure correct behavior.
-	 *
-	 * @param smi 	step meta interface implementation, containing the step settings
-	 * @param sdi	step data interface implementation, used to store runtime information
-	 */
-	public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
-
-		// Casting to step-specific implementation classes is safe
-		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
-		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
-
-		super.dispose(meta, data);
-	}
-
 }
