@@ -28,8 +28,6 @@ import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**
