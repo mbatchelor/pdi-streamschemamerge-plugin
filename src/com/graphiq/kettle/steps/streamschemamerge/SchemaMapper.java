@@ -1,9 +1,21 @@
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.pentaho.di.core.row.ValueMetaInterface.TYPE_INTEGER;
+import static org.pentaho.di.core.row.ValueMetaInterface.TYPE_NUMBER;
+import static org.pentaho.di.core.row.ValueMetaInterface.TYPE_BIGNUMBER;
+import static org.pentaho.di.core.row.ValueMetaInterface.TYPE_STRING;
+
+
 
 /**
  * Takes in RowMetas and find the union of them. Then maps the field of each row to its final destination
@@ -12,7 +24,7 @@ public class SchemaMapper {
     RowMetaInterface row;  // resolved row meta
     int[][] mapping;
 
-    public SchemaMapper(RowMetaInterface info[]) {
+    public SchemaMapper(RowMetaInterface info[]) throws KettlePluginException {
         unionMerge(info);
     }
 
@@ -21,7 +33,7 @@ public class SchemaMapper {
      * into their appropriate place
      * @param info row metas for the fields to merge
      */
-    private void unionMerge(RowMetaInterface info[]) {
+    private void unionMerge(RowMetaInterface info[]) throws KettlePluginException {
         // do set up
         mapping = new int[info.length][];
         RowMetaInterface base = info[0].clone();
@@ -38,7 +50,15 @@ public class SchemaMapper {
                     base.addValueMeta(field);
                     fieldNames.add(name);
                 }
-                rowMapping[x] = base.indexOfValue(name);  // update mapping for this field
+                int basePosition = base.indexOfValue(name);
+                rowMapping[x] = basePosition;  // update mapping for this field
+                // check if we need to change the data type to string
+                ValueMetaInterface baseField = base.getValueMeta(basePosition);
+                if (baseField.getType() != field.getType()) {
+                    ValueMetaInterface updatedField = ValueMetaFactory.cloneValueMeta(baseField, TYPE_STRING);
+                    base.setValueMeta(basePosition, updatedField);
+                }
+
             }
             mapping[i] = rowMapping;  // save the mapping for this rowMeta
         }

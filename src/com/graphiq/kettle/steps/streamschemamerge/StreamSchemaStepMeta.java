@@ -32,10 +32,7 @@ import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
-import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.exception.KettleStepException;
-import org.pentaho.di.core.exception.KettleValueException;
-import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.exception.*;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -202,7 +199,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
             xml.append( "        " + XMLHandler.addTagValue( "name", stepName ) );
             xml.append( "        </step>" + Const.CR );
         }
-        xml.append( "      </steps>" + Const.CR );
+        xml.append("      </steps>" + Const.CR);
 		return xml.toString();
 	}
 
@@ -310,13 +307,18 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 		/*
 		 * We don't have any input fields so we ingore inputRowMeta
 		 */
-        SchemaMapper tMapping = new SchemaMapper(info);  // compute the union of the info fields being passed in
-        RowMetaInterface base = tMapping.getRowMeta();
+        try {
+            SchemaMapper schemaMapping = new SchemaMapper(info);  // compute the union of the info fields being passed in
+            RowMetaInterface base = schemaMapping.getRowMeta();
 
-        for ( int i = 0; i < base.size(); i++ ) {
-            base.getValueMeta( i ).setOrigin( name );
+            for ( int i = 0; i < base.size(); i++ ) {
+                base.getValueMeta( i ).setOrigin( name );
+            }
+            inputRowMeta.mergeRowMeta(base);
+        } catch (KettlePluginException e) {
+            throw new KettleStepException("Kettle plugin exception trying to resolve fields");
         }
-        inputRowMeta.mergeRowMeta(base);
+
 		
 	}
 

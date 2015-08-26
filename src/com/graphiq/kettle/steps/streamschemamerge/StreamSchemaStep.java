@@ -63,7 +63,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	 */
 	public StreamSchemaStep(StepMeta s, StepDataInterface stepDataInterface, int c, TransMeta t, Trans dis) {
         super(s, stepDataInterface, c, t, dis);
-        dis.setSafeModeEnabled(false);  // safe mode is incomapitable with this step
+        dis.setSafeModeEnabled(false);  // safe mode is incompatible with this step
 	}
 
 	/**
