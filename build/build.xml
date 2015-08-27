@@ -12,8 +12,8 @@
 	<property name="classes" location="classes" />
 	<property name="dist" location="dist" />
     <property name="diststepdir" location="${dist}/steps" />
-	<property name="diststep" location="${diststepdir}/StreamSchemaMerge" />
-	<property name="pluginname" value="StreamSchemaMerge" />
+    <property name="pluginname" value="StreamSchemaMerge" />
+    <property name="diststep" location="${diststepdir}/${pluginname}" />
 	<property name="jarfilename" value="stream-schema-merge-step.jar" />
 
 	<!-- used to compile code -->
@@ -49,7 +49,9 @@
 		<jar jarfile="${diststep}/${jarfilename}" basedir="${classes}"/>
 
         <!-- zip folder for distribution-->
-        <zip destfile="${diststepdir}/${pluginname}.zip" basedir="${diststep}" />
+        <zip destfile="${diststepdir}/${pluginname}.zip">
+            <zipfileset dir="${diststep}" prefix="${pluginname}/"/>
+        </zip>
 
 	</target>
 	
