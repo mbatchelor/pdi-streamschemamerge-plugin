@@ -60,7 +60,7 @@ import org.w3c.dom.Node;
 
 @Step(	
 		id = "StreamSchemaStep",
-		image = "com/graphiq/kettle/steps/streamschemamerge/resources/icon.png",
+		image = "com/graphiq/kettle/steps/streamschemamerge/resources/icon.svg",
 		i18nPackageName="com.graphiq.kettle.steps.streamschemamerge",
 		name="StreamSchemaStep.Name",
 		description = "StreamSchemaStep.TooltipDesc",
