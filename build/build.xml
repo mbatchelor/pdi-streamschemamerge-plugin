@@ -62,6 +62,11 @@
 		<!-- jar class up -->
 		<jar jarfile="${diststep}/${jarfilename}" basedir="${classes}"/>
 
+        <!-- move version file to dist folder-->
+        <copy todir="${diststep}">
+            <fileset dir="${basedir}" includes="version.xml" />
+        </copy>
+
         <!-- zip folder for distribution-->
         <zip destfile="${diststepdir}/${pluginname}.zip">
             <zipfileset dir="${diststep}" prefix="${pluginname}/"/>
