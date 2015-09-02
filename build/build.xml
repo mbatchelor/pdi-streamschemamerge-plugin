@@ -12,7 +12,7 @@
 	<property name="classes" location="classes" />
 	<property name="dist" location="dist" />
     <property name="diststepdir" location="${dist}/steps" />
-    <property name="pluginname" value="StreamSchemaMerge" />
+    <property name="pluginname" value="StreamSchemaStep" />
     <property name="diststep" location="${diststepdir}/${pluginname}" />
 	<property name="jarfilename" value="stream-schema-merge-step.jar" />
 
