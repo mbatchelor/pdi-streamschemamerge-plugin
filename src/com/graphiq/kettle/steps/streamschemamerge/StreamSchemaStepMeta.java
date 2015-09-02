@@ -263,10 +263,12 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public void saveRep(Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step) throws KettleException
 	{
 		try{
-			// TODO populate
+            for (int i = 0; i < stepsToMerge.size(); i++) {
+                rep.saveJobEntryAttribute(id_transformation, id_step, i, stepsToMerge.get(i), "mergeStepName");
+            }
 		}
 		catch(Exception e){
-			throw new KettleException("Unable to save step into repository: "+id_step, e); 
+			throw new KettleException(BaseMessages.getString(PKG, "StreamSchemaStep.RepoSaveError")+id_step, e);
 		}
 	}		
 	
@@ -281,10 +283,13 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	 */
 	public void readRep(Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases) throws KettleException  {
 		try{
-            // TODO populate
+            int nrSteps = rep.countNrStepAttributes( id_step, "mergeStepName" );
+            for (int i = 0; i < nrSteps; i++) {
+                rep.getStepAttributeString(id_step, i, "mergeStepName");
+            }
 		}
 		catch(Exception e){
-			throw new KettleException("Unable to load step from repository", e);
+			throw new KettleException(BaseMessages.getString(PKG, "StreamSchemaStep.RepoLoadError"), e);
 		}
 	}
 
