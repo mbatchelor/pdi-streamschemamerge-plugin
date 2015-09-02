@@ -285,7 +285,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 		try{
             int nrSteps = rep.countNrStepAttributes( id_step, "mergeStepName" );
             for (int i = 0; i < nrSteps; i++) {
-                rep.getStepAttributeString(id_step, i, "mergeStepName");
+                stepsToMerge.add(rep.getStepAttributeString(id_step, i, "mergeStepName"));
             }
 		}
 		catch(Exception e){
