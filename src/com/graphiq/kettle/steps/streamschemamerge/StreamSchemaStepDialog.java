@@ -43,12 +43,14 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Button;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.plugins.PluginInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.errorhandling.Stream;
 import org.pentaho.di.trans.step.errorhandling.StreamIcon;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
@@ -342,6 +344,12 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
             infoStream.setStepMeta( transMeta.findStep( step ) );
             infoStream.setSubject(step);
         }
+    }
+
+    @Override
+    protected Button createHelpButton(Shell shell, StepMeta stepMeta, PluginInterface plugin) {
+        plugin.setDocumentationUrl("https://github.com/graphiq-data/pdi-streamschemamerge-plugin/blob/master/help.md");
+        return super.createHelpButton(shell, stepMeta, plugin);
     }
 	
 	/**
