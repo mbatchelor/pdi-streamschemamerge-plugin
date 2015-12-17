@@ -1,0 +1,12 @@
+language: java
+
+install:
+  - ant resolve
+  - ant -f build/build.xml dist
+
+script:
+  - ant -f build/build.xml test
+
+notifications:
+  slack:
+    secure: xFshfgo8C0M/ZYS3Db4MBes7gZYnT2vF9lJa5Hf8nufHbI0sPdWKZ/LX339vgz4UIWCTavw92v9+7w+oG8MxflgnYV8lFlhQHk0uKnfvRbZKsrcCSBUDpPPoHh3d9S8WSQvQMwR3BjYXytQEi5Hw1weh65Pqqdd9G3PfQyeYOpXv/qOEWqoiEjAjQ1LhThZB4yBhUn8bR1O4miClFljHJTWKuotsgy3n7qSdD0gGLSyAZQPmdQHBX2+xSsh3aJ/htSN7wfr6qZfsSj56PGdiVhaThUAAX2genRPUVK5wu1HGiYWcYroxUqLLk9jdI/kEpJB433WCu+IPIwiN60ERyzMrEITUPsdTOl0qVEgXTFeeTdc9k3tfFRIsUIjNemw+ZqZfQWxULQN/qNtV3zqf0wE6e56g1luGhi/WFitm+Fe8WckLnUnrfinZcte1avg/Qsh+C2Lp07ClNH6aQQ9pHIO9QxVtVngaW+lVCoqnlx6/U2Zoc5aZm8g85866FulDrwEbk2So9lkw53HIgpeYGFt4E3WbZNhebzMFedfU+tdYW4SugNJ0WLoB8ssS5WbxTUs4N2NupKiQ4IJ8a23n+XbOzyglTJxZqoWJ75sNuCgCmtBkrMMgzwX0zRg8zUjOLIQdrJVwgOv1gNvGlXh3LFREdcPyS6GLPmK1hbUa9GQ=
