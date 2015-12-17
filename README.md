@@ -1,5 +1,7 @@
 # Stream Schema Merge - PDI Plugin
 
+[![Build Status](https://travis-ci.org/graphiq-data/pdi-streamschemamerge-plugin.svg)](https://travis-ci.org/graphiq-data/pdi-streamschemamerge-plugin)
+
 This step allows you to merge streams with different schemas without first rearranging the fields, adding constants or modifying data meta types.
 
 ## Use Cases
