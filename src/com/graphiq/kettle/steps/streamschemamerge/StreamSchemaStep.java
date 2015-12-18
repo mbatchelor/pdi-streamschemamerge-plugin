@@ -35,7 +35,6 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
@@ -116,27 +115,27 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                 data.stepNames[i] = data.r.getName();
                 // Avoids race condition. Row metas are not available until the previous steps have called
                 // putRowWait at least once
-                data.timer = 10;  // we can have an infinite loop if a step isn't sending any rows
-                while (data.rowMetas[i] == null && data.timer > 0 && !isStopped()) {
+                data.iterations = 0;
+                boolean loopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
+                boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
+                while (data.rowMetas[i] == null && !loopedPostDoneSignal && !isStopped()) {
                     data.rowMetas[i] = data.r.getRowMeta();
-                    data.timer--;
-                    if (data.rowMetas[i] == null && !data.r.isDone()) {
-                        // wait a little bit before trying again
-                        try {
-                            TimeUnit.SECONDS.sleep(1);  // 2 sec worked in testing
-                        } catch (InterruptedException e) {
-                            if (isDebug()) {
-                                logDebug("Interrupted while sleeping");
-                            }
-                        }
+                    data.iterations++;
+                    if (doneSignal) {
+                        // we have completed a loop after the done signal
+                        loopedPostDoneSignal = true;
                     }
-
+                    if (data.r.isDone()) {
+                        // we've received the done signal
+                        doneSignal = true;
+                    }
                 }
                 if (data.rowMetas[i] != null) {
+                    // indicates this rowset is not sending any rows
                     data.foundARowMeta = true;
                 }
                 if (isDebug()) {
-                    logDebug("Iterations: " + (10 - data.timer));
+                    logDebug("Iterations: " + data.iterations);
                 }
             }
 

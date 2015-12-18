@@ -65,7 +65,7 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
     public boolean foundARowMeta;  // indicates that rows are being sent to the step
 
-    public int timer;  // used to prevent infinite loops when processing first row
+    public int iterations;  // used to track how many loops have occurred looking for rowsets
 
     public Set<Integer> convertToString; // used when we have to resolve data type mismatches
 }
