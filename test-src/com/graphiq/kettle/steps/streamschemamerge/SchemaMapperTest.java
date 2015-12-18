@@ -40,6 +40,8 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.errorhandling.Stream;
 import org.pentaho.di.trans.step.errorhandling.StreamIcon;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
+import org.pentaho.di.trans.steps.selectvalues.SelectValuesMeta;
+import org.pentaho.di.trans.steps.selectvalues.SelectMetadataChange;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,9 +73,20 @@ public class SchemaMapperTest extends TestCase {
         return new StepMeta(uniqueListPid, name, streamSchemaMeta);
     }
 
-    private void updateInfoStreams(StreamSchemaStepMeta sm, int nrsteps, String[] inputSteps) {
+    private StepMeta createSelectValuesStep(String name, PluginRegistry registry) {
+        SelectValuesMeta selectMeta = new SelectValuesMeta();
+        SelectMetadataChange change = new SelectMetadataChange(selectMeta);
+        change.setName("c1");
+        change.setRename("c1");
+        change.setType(ValueMeta.TYPE_NUMBER);
+        SelectMetadataChange[] meta = {change};
+        selectMeta.setMeta(meta);
 
+        String selectValuesPid = registry.getPluginId(StepPluginType.class, selectMeta);
+
+        return new StepMeta(selectValuesPid, name, selectMeta);
     }
+
 
     /**
      * Creates a row meta interface for the fields that are defined
@@ -135,9 +148,12 @@ public class SchemaMapperTest extends TestCase {
     private List<RowMetaAndData> createExpectedResults() {
         List<RowMetaAndData> list = new ArrayList<RowMetaAndData>();
         ValueMetaInterface[] valuesMetas = genValueMetaArray(columns1, metaTypesTarget);
+        for (int i = 0; i < valuesMetas.length; i++) {
+            valuesMetas[i].setStorageType(ValueMeta.STORAGE_TYPE_NORMAL);
+        }
         RowMetaInterface rm = createRowMetaInterface(valuesMetas);
 
-        Object[] r1 = new Object[]{1, "hov"};
+        Object[] r1 = new Object[]{1.0, "hov"};
         Object[] r2 = new Object[]{1.5, "guava"};
 
         list.add(new RowMetaAndData(rm, r1));
@@ -169,10 +185,16 @@ public class SchemaMapperTest extends TestCase {
         StepMeta injectorStep2 = TestUtilities.createInjectorStep(injectorStepName2, registry);
         transMeta.addStep(injectorStep2);
 
+        // Create Injector3
+        String injectorStepName3 = "injector step 3";
+        StepMeta injectorStep3 = TestUtilities.createInjectorStep(injectorStepName3, registry);
+        transMeta.addStep(injectorStep3);
+
         // Create a Stream Schema Merge step
         String streamSchemaStepName = "Stream Schema step";
         StepMeta streamSchemaStep = createStreamSchemaStep(streamSchemaStepName, registry,
-                new String[]{injectorStepName1, injectorStepName2}, Arrays.asList(injectorStep1, injectorStep2));
+                new String[]{ injectorStepName1, injectorStepName2, injectorStepName3 },
+                Arrays.asList(injectorStep1, injectorStep2, injectorStep3));
         transMeta.addStep(streamSchemaStep);
 
         // TransHopMetas between injector steps and StreamSchema Step
@@ -180,16 +202,26 @@ public class SchemaMapperTest extends TestCase {
         transMeta.addTransHop(injector1_hop);
         TransHopMeta injector2_hop = new TransHopMeta(injectorStep2, streamSchemaStep);
         transMeta.addTransHop(injector2_hop);
+        TransHopMeta injector3_hop = new TransHopMeta(injectorStep3, streamSchemaStep);
+        transMeta.addTransHop(injector3_hop);
 
+        // Create SelectValues Step
+        String selectValuesName = "Test Meta Data";
+        StepMeta selectValuesStep = createSelectValuesStep(selectValuesName, registry);
+        transMeta.addStep(selectValuesStep);
+
+        // TransHopMeta between SelectValues and Dummy
+        TransHopMeta streamSchemaSelectValues = new TransHopMeta(streamSchemaStep, selectValuesStep);
+        transMeta.addTransHop(streamSchemaSelectValues);
 
         // Create a dummy step
         String dummyStepName = "dummy step";
         StepMeta dummyStep = TestUtilities.createDummyStep(dummyStepName, registry);
         transMeta.addStep(dummyStep);
 
-        // TransHopMeta between StreamSchema and Dummy
-        TransHopMeta streamSchema_hop_dummy = new TransHopMeta(streamSchemaStep, dummyStep);
-        transMeta.addTransHop(streamSchema_hop_dummy);
+        // TransHopMeta between SelectValues and Dummy
+        TransHopMeta selectValuesDummy = new TransHopMeta(selectValuesStep, dummyStep);
+        transMeta.addTransHop(selectValuesDummy);
 
 
         // Execute the transformation
@@ -204,6 +236,7 @@ public class SchemaMapperTest extends TestCase {
         // Create row producers
         RowProducer rowProducer1 = trans.addRowProducer(injectorStepName1, 0);
         RowProducer rowProducer2 = trans.addRowProducer(injectorStepName2, 0);
+        RowProducer rowProducer3 = trans.addRowProducer(injectorStepName3, 0);
         trans.startThreads();
 
         // create the rows
@@ -217,6 +250,7 @@ public class SchemaMapperTest extends TestCase {
             rowProducer2.putRow(rowMetaAndData.getRowMeta(), rowMetaAndData.getData());
         }
         rowProducer2.finished();
+        rowProducer3.finished();
 
         trans.waitUntilFinished();
 
