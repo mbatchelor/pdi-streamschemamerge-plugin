@@ -187,7 +187,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		for (int j = 0; j < data.inRowMeta.size(); j++) {
             int newPos = data.rowMapping[j];
             // map a fields old position to its new position
-            if (data.convertToString.contains(newPos)) {
+            if (data.convertToString.contains(newPos) && incomingRow[j] != null) {
                 // we need to convert the underlying data type to string
                 outputRow[newPos] = incomingRow[j].toString();
             } else {
