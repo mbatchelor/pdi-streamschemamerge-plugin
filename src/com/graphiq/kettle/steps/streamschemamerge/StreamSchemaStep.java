@@ -35,6 +35,7 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 /**
  * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
@@ -85,6 +86,8 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.rowMetas = new RowMetaInterface[data.numSteps];
 		data.rowSets = new ArrayList<RowSet>();
         data.stepNames = new String[data.numSteps];
+		data.initialRowBuffer = new LinkedList<Object[]>();
+		data.initialRowBufferRowsetNumber = new LinkedList<Integer>();
 
 		return super.init(meta, data);
 	}
@@ -129,6 +132,16 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                         // we've received the done signal
                         doneSignal = true;
                     }
+					// This step blocks until it gets data from all input row sets (or the row sets tell it they're done)
+					// This means that you can encounter issues if you split a stream with a filter, do some action
+					// and then join it back together with this step. You will be deadlocked. This alleviates the issue
+					// by freeing room in the blocking rowset and storing it in this step until we receive a row from
+					// all incoming rowsets. We then
+					// together with this step and
+					if (data.iterations > data.ACCUMULATION_TRIGGER) {
+						data.initialRowBuffer.add(getRow());
+						data.initialRowBufferRowsetNumber.add(i);
+					}
                 }
                 if (data.rowMetas[i] != null) {
                     // indicates this rowset is not sending any rows
@@ -156,7 +169,13 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		}
 
-		Object[] incomingRow = getRow();  // get the next available row
+		Object[] incomingRow;
+		if (data.initialRowBuffer.size() > 0) {
+			// clear cache before reading rows form rowset again
+			incomingRow = data.initialRowBuffer.remove();
+		} else {
+			incomingRow = getRow();  // get the next available row
+		}
 
 		// if no more rows are expected, indicate step is finished and processRow() should not be called again
 		if (incomingRow == null){
@@ -164,8 +183,13 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-        // get the name of the step that the current rowset is coming from
-		data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
+		if (data.initialRowBuffer.size() > 0) {
+			// we're reading fromt he cache not the rowset
+			data.currentName = getInputRowSets().get(data.initialRowBufferRowsetNumber.remove()).getName();
+		} else {
+			// get the name of the step that the current rowset is coming from
+			data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
+		}
         // because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
         // need to use the name to find the proper index for our lookups later
 		for (int i = 0; i < data.stepNames.length; i++) {
