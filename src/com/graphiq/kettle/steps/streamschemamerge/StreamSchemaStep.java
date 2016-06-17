@@ -22,10 +22,12 @@
 
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import org.apache.commons.vfs.FileObject;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
@@ -33,7 +35,12 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -86,8 +93,21 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.rowMetas = new RowMetaInterface[data.numSteps];
 		data.rowSets = new ArrayList<RowSet>();
         data.stepNames = new String[data.numSteps];
-		data.initialRowBuffer = new LinkedList<Object[]>();
-		data.initialRowBufferRowsetNumber = new LinkedList<Integer>();
+		data.inputRowSetNumbers = new LinkedList<Integer>();
+		data.files = new LinkedList<FileObject>();
+		data.outStreams = new ArrayList<ObjectOutputStream>(data.infoStreams.size());
+		data.inStreams = new ArrayList<ObjectInputStream>(data.infoStreams.size());
+		for (int i = 0; i < data.infoStreams.size(); i++) {
+			try {
+				FileObject fileObject = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
+				data.files.add(fileObject);
+				ObjectOutputStream outputStream = new ObjectOutputStream(KettleVFS.getOutputStream(fileObject, false));
+				data.outStreams.add(outputStream);
+			} catch (Exception e) {
+				logError("Unable to create file object");
+				return false;
+			}
+		}
 
 		return super.init(meta, data);
 	}
@@ -132,17 +152,28 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                         // we've received the done signal
                         doneSignal = true;
                     }
-					// This step blocks until it gets data from all input row sets (or the row sets tell it they're done)
-					// This means that you can encounter issues if you split a stream with a filter, do some action
-					// and then join it back together with this step. You will be deadlocked. This alleviates the issue
-					// by freeing room in the blocking rowset and storing it in this step until we receive a row from
-					// all incoming rowsets. We then
-					// together with this step and
+					/*
+					 This step blocks until it gets data from all input row sets (or the rowsets say they're done)
+					 This means that you can encounter issues if you split a stream with a filter, do some action
+					 and then join it back together with this step and one of the steps hasn't received any steps before the blocking starts.
+					 You can get deadlocked. This alleviates the issue by freeing room in the blocking rowset and
+					 storing it on disk.
+					 */
 					if (data.iterations > data.ACCUMULATION_TRIGGER) {
-						data.initialRowBuffer.add(getRow());
-						data.initialRowBufferRowsetNumber.add(i);
+						try {
+							Object [] row = getRow();
+							if (row != null) {
+								data.outStreams.get(getCurrentInputRowSetNr()).writeObject(row);
+								data.inputRowSetNumbers.add(getCurrentInputRowSetNr());
+							} else {
+								logDebug(String.format("Found null at %d", data.inputRowSetNumbers.size()));
+							}
+						} catch (IOException e) {
+							throw new KettleException(e.getMessage());
+						}
 					}
                 }
+
                 if (data.rowMetas[i] != null) {
                     // indicates this rowset is not sending any rows
                     data.foundARowMeta = true;
@@ -150,7 +181,20 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                 if (isDebug()) {
                     logDebug("Iterations: " + data.iterations);
                 }
-            }
+			}
+
+			// close output streams and open input streams
+			try {
+				for (ObjectOutputStream os: data.outStreams) {
+					os.close();
+				}
+				for (int index = 0; index < data.files.size(); index++) {
+					data.inStreams.add(new ObjectInputStream(KettleVFS.getInputStream(data.files.get(index))));
+				}
+				logDebug("Buffered rows: " + data.inputRowSetNumbers.size());
+			} catch (IOException ex) {
+				throw new KettleException("Error closing outstreams and opening in streams: " + ex.getMessage());
+			}
 
             if (!data.foundARowMeta) {
                 // none of the steps are sending rows so indicate we're done
@@ -169,10 +213,18 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		}
 
-		Object[] incomingRow;
-		if (data.initialRowBuffer.size() > 0) {
+		Object[] incomingRow = null;
+		if (data.inputRowSetNumbers.size() > 0) {
 			// clear cache before reading rows form rowset again
-			incomingRow = data.initialRowBuffer.remove();
+			try {
+				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.peek()).readObject();
+//				int num = data.inputRowSetNumbers.peek();
+//				ObjectInputStream stream = data.inStreams.get(num);
+//				Object oj = stream.readObject();
+//				incomingRow = (Object [])oj;
+			} catch (Exception e) {
+				throw new KettleException("Error reading buffered rows: " + e.getMessage());
+			}
 		} else {
 			incomingRow = getRow();  // get the next available row
 		}
@@ -183,9 +235,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-		if (data.initialRowBuffer.size() > 0) {
+		if (data.inputRowSetNumbers.size() > 0) {
 			// we're reading fromt he cache not the rowset
-			data.currentName = getInputRowSets().get(data.initialRowBufferRowsetNumber.remove()).getName();
+			data.currentName = getInputRowSets().get(data.inputRowSetNumbers.remove()).getName();
 		} else {
 			// get the name of the step that the current rowset is coming from
 			data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
@@ -193,7 +245,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
         // because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
         // need to use the name to find the proper index for our lookups later
 		for (int i = 0; i < data.stepNames.length; i++) {
-			if (data.stepNames[i].equals(data.currentName)) {
+			if (data.stepNames[i] != null && data.stepNames[i].equals(data.currentName)) {
 				data.streamNum = i;
 				break;
 			}
@@ -254,6 +306,18 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
         data.rowMapping = null;
         data.stepNames = null;
         data.r = null;
+		data.inputRowSetNumbers = null;
+		data.outStreams = null;
+		for (ObjectInputStream is: data.inStreams) {
+			try {
+				is.close();
+			} catch (IOException e) {
+				logBasic("Hit exception when cleaning up: " + e.getMessage());
+			}
+		}
+		data.outStreams = null;
+		data.files = null;
+
 
         super.dispose(meta, data);
     }

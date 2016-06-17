@@ -22,12 +22,15 @@
 
 package com.graphiq.kettle.steps.streamschemamerge;
 
+import org.apache.commons.vfs.FileObject;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -70,10 +73,15 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
     public Set<Integer> convertToString; // used when we have to resolve data type mismatches
 
-	public LinkedList<Object[]> initialRowBuffer;
+	public LinkedList<Integer> inputRowSetNumbers;
 
-	public LinkedList<Integer> initialRowBufferRowsetNumber;
+	public int ACCUMULATION_TRIGGER = 100000;
 
-	public int ACCUMULATION_TRIGGER;
+	public List<ObjectOutputStream> outStreams;
+
+	public List<ObjectInputStream> inStreams;
+
+	public List<FileObject> files;
+
 }
 	
