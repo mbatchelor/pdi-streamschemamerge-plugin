@@ -284,9 +284,16 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public void readRep(Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases) throws KettleException  {
 		try{
             int nrSteps = rep.countNrStepAttributes( id_step, "mergeStepName" );
-            for (int i = 0; i < nrSteps; i++) {
-                stepsToMerge.add(rep.getStepAttributeString(id_step, i, "mergeStepName"));
-            }
+			for ( int i = 0; i < nrSteps; i++ ) {
+				getStepIOMeta().addStream(
+						new Stream( StreamInterface.StreamType.INFO, null, "Streams to Merge", StreamIcon.INFO, null ) );
+			}
+			List<StreamInterface> infoStreams = getStepIOMeta().getInfoStreams();
+			for ( int i = 0; i < nrSteps; i++ ) {
+				String name = rep.getStepAttributeString(id_step, i, "mergeStepName");
+				stepsToMerge.add(name);
+				infoStreams.get(i).setSubject(name);
+			}
 		}
 		catch(Exception e){
 			throw new KettleException(BaseMessages.getString(PKG, "StreamSchemaStep.RepoLoadError"), e);
