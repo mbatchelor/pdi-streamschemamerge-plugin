@@ -68,7 +68,7 @@
         </copy>
 
         <!-- zip folder for distribution-->
-        <zip destfile="${diststepdir}/${pluginname}.zip">
+        <zip destfile="${diststepdir}/${pluginname}_pdi6.zip">
             <zipfileset dir="${diststep}" prefix="${pluginname}/"/>
         </zip>
 
