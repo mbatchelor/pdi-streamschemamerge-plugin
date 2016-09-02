@@ -223,8 +223,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
                 if (data.rowMetas[i] != null) {
 					data.foundARowMeta = true;  // indicates at least one rowset is sending rows
-				} else {
-					logBasic(String.format("No meta found for %d", i));
 				}
                 if (isDebug()) {
                     logDebug("Iterations: " + data.iterations);
