@@ -37,12 +37,13 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
@@ -92,11 +93,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.numSteps = data.infoStreams.size();
 		data.rowMetas = new RowMetaInterface[data.numSteps];
 		data.rowSets = new ArrayList<RowSet>();
-        data.stepNames = new String[data.numSteps];
+        data.stepNames = new ArrayList<String>(data.numSteps);
 		data.inputRowSetNumbers = new LinkedList<Integer>();
 		data.files = new LinkedList<FileObject>();
 		data.outStreams = new ArrayList<ObjectOutputStream>(data.infoStreams.size());
 		data.inStreams = new ArrayList<ObjectInputStream>(data.infoStreams.size());
+		data.inputRowSetNames = new LinkedList<String>();
+		data.cacheRowMetaMap = new HashMap<Integer, RowMetaInterface>();
+		data.cacheRowSetNameMap = new HashMap<Integer, String>();
 		for (int i = 0; i < data.infoStreams.size(); i++) {
 			try {
 				FileObject fileObject = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
@@ -110,6 +114,15 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		}
 
 		return super.init(meta, data);
+	}
+
+	private static int findInfoStreamPosition(List<StreamInterface> infoStreams, String stepName) {
+		for (int i = 0; i < infoStreams.size(); i++) {
+			if (infoStreams.get(i).getStepname().equals(stepName)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	/**
@@ -133,24 +146,35 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			first = false;
             data.foundARowMeta = false;
             for (int i = 0; i < data.infoStreams.size(); i++) {
-                data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
-                data.rowSets.add(data.r);
-                data.stepNames[i] = data.r.getName();
+				data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
+                if (data.r == null) {
+					// see if the rowset has been removed by the calls to getRow below that prevent the step from blocking
+					// in which case we should have stored the relevant info for retrieval
+					if (data.cacheRowMetaMap.containsKey(i)) {
+						data.rowMetas[i] = data.cacheRowMetaMap.get(i);
+						data.stepNames.add(data.cacheRowSetNameMap.get(i));
+						data.foundARowMeta = true;
+						continue;
+					}
+					throw new KettleException(String.format("Missing a rowset for %s", data.infoStreams.get(i).getStepname()));
+				}
+				data.rowSets.add(data.r);
+				data.stepNames.add(data.r.getName());
                 // Avoids race condition. Row metas are not available until the previous steps have called
                 // putRowWait at least once
                 data.iterations = 0;
-                boolean loopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
-                boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
-                while (data.rowMetas[i] == null && !loopedPostDoneSignal && !isStopped()) {
+				data.completedLoopedPostDoneSignal = false;
+				data.doneSignal = false;
+				while (data.rowMetas[i] == null && !data.completedLoopedPostDoneSignal && !isStopped()) {
                     data.rowMetas[i] = data.r.getRowMeta();
                     data.iterations++;
-                    if (doneSignal) {
+                    if (data.doneSignal) {
                         // we have completed a loop after the done signal
-                        loopedPostDoneSignal = true;
+                        data.completedLoopedPostDoneSignal = true;
                     }
                     if (data.r.isDone()) {
                         // we've received the done signal
-                        doneSignal = true;
+                        data.doneSignal = true;
                     }
 					/*
 					 This step blocks until it gets data from all input row sets (or the rowsets say they're done)
@@ -163,8 +187,31 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 						try {
 							Object [] row = getRow();
 							if (row != null) {
-								data.outStreams.get(getCurrentInputRowSetNr()).writeObject(row);
-								data.inputRowSetNumbers.add(getCurrentInputRowSetNr());
+								/*
+								Calling getRow can wind up removing the rowSet from the list of rowsets.
+								Therefore, we need to store the RowMeta and RowSet Name for the rowsets as they
+								correspond to the infostreams as we get them via getRow. The RowMeta and RowSetName
+								are the ultimate reason we're doing everything up until this point.
+								We need the RowMetas to build the Schema Mapper and we need the RowSet Names's to do
+								lookups later on to determine what mapping scheme to use
+								 */
+								int rowSetNum = getCurrentInputRowSetNr();
+								RowSet curr = getInputRowSets().get(rowSetNum);
+								// todo investigate treatment of step copies
+								int infostreamNum = findInfoStreamPosition(data.infoStreams, curr.getOriginStepName());
+								if (infostreamNum < 0) {
+									throw new KettleException("Unable to find a valid infostream");
+								}
+								data.cacheRowMetaMap.put(infostreamNum, curr.getRowMeta());
+								data.cacheRowSetNameMap.put(infostreamNum, curr.getName());
+
+								/*
+								we need to store row set numbers and row set name for each row so we can reference
+								this info when we pull these rows off to process later
+								 */
+								data.outStreams.get(rowSetNum).writeObject(row);
+								data.inputRowSetNumbers.add(rowSetNum);
+								data.inputRowSetNames.add(curr.getName());
 							} else {
 								logDebug(String.format("Found null at %d", data.inputRowSetNumbers.size()));
 							}
@@ -175,9 +222,10 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                 }
 
                 if (data.rowMetas[i] != null) {
-                    // indicates this rowset is not sending any rows
-                    data.foundARowMeta = true;
-                }
+					data.foundARowMeta = true;  // indicates at least one rowset is sending rows
+				} else {
+					logBasic(String.format("No meta found for %d", i));
+				}
                 if (isDebug()) {
                     logDebug("Iterations: " + data.iterations);
                 }
@@ -202,6 +250,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
                 return false;
             }
 
+			// set up are mapping structures
 			data.schemaMapping = new SchemaMapper(data.rowMetas);  // creates mapping and master output row
 			data.mapping = data.schemaMapping.getMapping();
 			data.outputRowMeta = data.schemaMapping.getRowMeta();
@@ -213,15 +262,11 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		}
 
-		Object[] incomingRow = null;
+		Object[] incomingRow;
 		if (data.inputRowSetNumbers.size() > 0) {
 			// clear cache before reading rows form rowset again
 			try {
-				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.peek()).readObject();
-//				int num = data.inputRowSetNumbers.peek();
-//				ObjectInputStream stream = data.inStreams.get(num);
-//				Object oj = stream.readObject();
-//				incomingRow = (Object [])oj;
+				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.remove()).readObject();
 			} catch (Exception e) {
 				throw new KettleException("Error reading buffered rows: " + e.getMessage());
 			}
@@ -235,20 +280,25 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-		if (data.inputRowSetNumbers.size() > 0) {
-			// we're reading fromt he cache not the rowset
-			data.currentName = getInputRowSets().get(data.inputRowSetNumbers.remove()).getName();
+		if (data.inputRowSetNames.size() > 0) {
+			// we're reading from the cache not the rowset
+			data.currentName = data.inputRowSetNames.remove();
 		} else {
 			// get the name of the step that the current rowset is coming from
 			data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
 		}
         // because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
         // need to use the name to find the proper index for our lookups later
-		for (int i = 0; i < data.stepNames.length; i++) {
-			if (data.stepNames[i] != null && data.stepNames[i].equals(data.currentName)) {
+		data.streamNum = -1;
+		for (int i = 0; i < data.stepNames.size(); i++) {
+			if (data.stepNames.get(i) != null && data.stepNames.get(i).equals(data.currentName)) {
 				data.streamNum = i;
 				break;
 			}
+		}
+		if (data.streamNum < 0) {
+			throw new KettleException(String.format("Failed to find a matching step name for %s in the stepnames",
+					data.currentName));
 		}
         if (isRowLevel()) {
             logRowlevel(String.format("Current row from %s. This maps to stream number %d", data.currentName,

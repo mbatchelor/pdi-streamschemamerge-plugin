@@ -24,6 +24,7 @@ package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.apache.commons.vfs.FileObject;
 import org.pentaho.di.core.RowSet;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
@@ -33,6 +34,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -63,7 +65,7 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
 	public int[] rowMapping;  // row mapping for the current row
 
-	public String[] stepNames;  // rowset names for incoming rowsets
+	public List<String> stepNames;  // rowset names for incoming rowsets
 
 	public RowSet r;  // used for iterating over rowsets
 
@@ -73,15 +75,25 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
     public Set<Integer> convertToString; // used when we have to resolve data type mismatches
 
-	public LinkedList<Integer> inputRowSetNumbers;
+	public LinkedList<Integer> inputRowSetNumbers;  // row set numbers for the rows written to disk
 
-	public int ACCUMULATION_TRIGGER = 100000;
+	public LinkedList<String> inputRowSetNames;  // row set names for rows written to disk
 
-	public List<ObjectOutputStream> outStreams;
+	public int ACCUMULATION_TRIGGER = 100000;  // the number of iterations before we decide to start writing rows to disk (to prevent blocking)
 
-	public List<ObjectInputStream> inStreams;
+	public List<ObjectOutputStream> outStreams;  // streams for writing cached rows
+
+	public List<ObjectInputStream> inStreams;  // streams for reading cached rows
 
 	public List<FileObject> files;
+
+	public Map<Integer, RowMetaInterface> cacheRowMetaMap;  // lookup for row metas that might get removed when writing rows to disk
+
+	public Map<Integer, String> cacheRowSetNameMap;  // lookup for row set names that might get removed when writing rows to disk
+
+	boolean completedLoopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
+
+	boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
 
 }
 	
