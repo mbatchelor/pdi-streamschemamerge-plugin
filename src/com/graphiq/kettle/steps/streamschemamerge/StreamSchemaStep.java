@@ -129,6 +129,17 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	 * For each row, create a new output row in the model of the master output row and copy the data values in to the
 	 * appropriate indexes
 	 *
+	 * Step Overview
+	 *
+	 * The step works by getting the meta information about each of the incoming infostreams and creating a mapping
+	 * for each of these infostreams to the single outputstream. The step needs to wait for the meta information from
+	 * each of the infostreams or the signal from that stream that no rows are coming. Due to the BlockRowSet
+	 * architecture that connects steps in Kettle, you can reach a deadlock if the BlockingRowSet gets full before
+	 * each of the infostreams has sent its meta information. Because of this, there may be a need to copy rows to disk
+	 * during the setup phase until we get meta information from each row. Once we've created the mapping structure,
+	 * we read any rows we've written to disk and then start reading rows normally.
+	 *
+	 *
 	 * @param smi the step meta interface containing the step settings
 	 * @param sdi the step data interface that should be used to store
 	 *
