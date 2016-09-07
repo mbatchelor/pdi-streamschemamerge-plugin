@@ -167,7 +167,19 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 						data.foundARowMeta = true;
 						continue;
 					}
-					throw new KettleException(String.format("Missing a rowset for %s", data.infoStreams.get(i).getStepname()));
+					if (data.remainingRowSetRetries > 0) {
+						data.remainingRowSetRetries--;
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// keep going
+						}
+						i--; // we want to try this infostream again
+					} else {
+						throw new KettleException(String.format("Missing a rowset for %s",
+								data.infoStreams.get(i).getStepname()));
+					}
+
 				}
 				data.rowSets.add(data.r);
 				data.stepNames.add(data.r.getName());

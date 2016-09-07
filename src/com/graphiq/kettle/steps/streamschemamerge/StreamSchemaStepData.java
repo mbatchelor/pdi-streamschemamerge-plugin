@@ -91,9 +91,11 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
 	public Map<Integer, String> cacheRowSetNameMap;  // lookup for row set names that might get removed when writing rows to disk
 
-	boolean completedLoopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
+	public boolean completedLoopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
 
-	boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
+	public boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
+
+	public int remainingRowSetRetries = 10;
 
 }
 	
