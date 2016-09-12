@@ -175,20 +175,26 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 							// keep going
 						}
 						i--; // we want to try this infostream again
+						logBasic(String.format("Retrying infostream %d, for the %d time", i, data.remainingRowSetRetries));
+						continue;
 					} else {
-						throw new KettleException(String.format("Missing a rowset for %s",
-								data.infoStreams.get(i).getStepname()));
+						logBasic(String.format("Missing a rowset for %s, continuing", data.infoStreams.get(i).getStepname()));
 					}
 
 				}
+				data.remainingRowSetRetries = 10;
 				data.rowSets.add(data.r);
-				data.stepNames.add(data.r.getName());
+				if (data.r == null) {
+					data.stepNames.add("");
+				} else {
+					data.stepNames.add(data.r.getName());
+				}
 				// Avoids race condition. Row metas are not available until the previous steps have called
 				// putRowWait at least once
 				data.iterations = 0;
 				data.completedLoopedPostDoneSignal = false;
 				data.doneSignal = false;
-				while (data.rowMetas[i] == null && !data.completedLoopedPostDoneSignal && !isStopped()) {
+				while (data.rowMetas[i] == null && data.r != null && !data.completedLoopedPostDoneSignal && !isStopped()) {
 					data.rowMetas[i] = data.r.getRowMeta();
 					data.iterations++;
 					if (data.doneSignal) {
