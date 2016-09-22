@@ -23,6 +23,7 @@
 package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.apache.commons.vfs.FileObject;
+import org.apache.commons.vfs.FileSystemException;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
@@ -390,6 +391,13 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 				is.close();
 			} catch (IOException e) {
 				logBasic("Hit exception when cleaning up: " + e.getMessage());
+			}
+		}
+		for (FileObject obj : data.files) {
+			try {
+				obj.delete();
+			} catch (FileSystemException e) {
+				logBasic(String.format("Unable to delete file %s because %s", obj.getName(), e.getMessage()));
 			}
 		}
 		data.outStreams = null;
