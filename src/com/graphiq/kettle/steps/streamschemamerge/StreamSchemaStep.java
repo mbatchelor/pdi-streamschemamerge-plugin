@@ -10,7 +10,7 @@
 * you may not use this file except in compliance with
 * the License. You may obtain a copy of the License at
 *
-*    http://www.apache.org/licenses/LICENSE-2.0
+*	http://www.apache.org/licenses/LICENSE-2.0
 *
 * Unless required by applicable law or agreed to in writing, software
 * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,7 @@
 package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
@@ -37,12 +38,13 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Merge streams from multiple different steps into a single stream. Unlike most other steps, this step does NOT
@@ -70,8 +72,8 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 	 * @param dis				transformation executing
 	 */
 	public StreamSchemaStep(StepMeta s, StepDataInterface stepDataInterface, int c, TransMeta t, Trans dis) {
-        super(s, stepDataInterface, c, t, dis);
-        dis.setSafeModeEnabled(false);  // safe mode is incompatible with this step
+		super(s, stepDataInterface, c, t, dis);
+		dis.setSafeModeEnabled(false);  // safe mode is incompatible with this step
 	}
 
 	/**
@@ -92,11 +94,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.numSteps = data.infoStreams.size();
 		data.rowMetas = new RowMetaInterface[data.numSteps];
 		data.rowSets = new ArrayList<RowSet>();
-        data.stepNames = new String[data.numSteps];
+		data.stepNames = new ArrayList<String>(data.numSteps);
 		data.inputRowSetNumbers = new LinkedList<Integer>();
 		data.files = new LinkedList<FileObject>();
 		data.outStreams = new ArrayList<ObjectOutputStream>(data.infoStreams.size());
 		data.inStreams = new ArrayList<ObjectInputStream>(data.infoStreams.size());
+		data.inputRowSetNames = new LinkedList<String>();
+		data.cacheRowMetaMap = new HashMap<Integer, RowMetaInterface>();
+		data.cacheRowSetNameMap = new HashMap<Integer, String>();
 		for (int i = 0; i < data.infoStreams.size(); i++) {
 			try {
 				FileObject fileObject = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
@@ -112,9 +117,29 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		return super.init(meta, data);
 	}
 
+	private static int findInfoStreamPosition(List<StreamInterface> infoStreams, String stepName) {
+		for (int i = 0; i < infoStreams.size(); i++) {
+			if (infoStreams.get(i).getStepname().equals(stepName)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	/**
 	 * For each row, create a new output row in the model of the master output row and copy the data values in to the
-     * appropriate indexes
+	 * appropriate indexes
+	 *
+	 * Step Overview
+	 *
+	 * The step works by getting the meta information about each of the incoming infostreams and creating a mapping
+	 * for each of these infostreams to the single outputstream. The step needs to wait for the meta information from
+	 * each of the infostreams or the signal from that stream that no rows are coming. Due to the BlockRowSet
+	 * architecture that connects steps in Kettle, you can reach a deadlock if the BlockingRowSet gets full before
+	 * each of the infostreams has sent its meta information. Because of this, there may be a need to copy rows to disk
+	 * during the setup phase until we get meta information from each row. Once we've created the mapping structure,
+	 * we read any rows we've written to disk and then start reading rows normally.
+	 *
 	 *
 	 * @param smi the step meta interface containing the step settings
 	 * @param sdi the step data interface that should be used to store
@@ -126,32 +151,61 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
 		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
-        /*
-         * Code in first method is responsible for finishing the initialization that we couldn't do earlier
-         */
+		/*
+		 * Code in first method is responsible for finishing the initialization that we couldn't do earlier
+		 */
 		if (first) {
 			first = false;
-            data.foundARowMeta = false;
-            for (int i = 0; i < data.infoStreams.size(); i++) {
-                data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
-                data.rowSets.add(data.r);
-                data.stepNames[i] = data.r.getName();
-                // Avoids race condition. Row metas are not available until the previous steps have called
-                // putRowWait at least once
-                data.iterations = 0;
-                boolean loopedPostDoneSignal = false;  // this ensures that we run 1 final time after the done signal
-                boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
-                while (data.rowMetas[i] == null && !loopedPostDoneSignal && !isStopped()) {
-                    data.rowMetas[i] = data.r.getRowMeta();
-                    data.iterations++;
-                    if (doneSignal) {
-                        // we have completed a loop after the done signal
-                        loopedPostDoneSignal = true;
-                    }
-                    if (data.r.isDone()) {
-                        // we've received the done signal
-                        doneSignal = true;
-                    }
+			data.foundARowMeta = false;
+			for (int i = 0; i < data.infoStreams.size(); i++) {
+				data.r = findInputRowSet(data.infoStreams.get(i).getStepname());
+				if (data.r == null) {
+					// see if the rowset has been removed by the calls to getRow below that prevent the step from blocking
+					// in which case we should have stored the relevant info for retrieval
+					if (data.cacheRowMetaMap.containsKey(i)) {
+						data.rowMetas[i] = data.cacheRowMetaMap.get(i);
+						data.stepNames.add(data.cacheRowSetNameMap.get(i));
+						data.foundARowMeta = true;
+						continue;
+					}
+					if (data.remainingRowSetRetries > 0) {
+						data.remainingRowSetRetries--;
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// keep going
+						}
+						i--; // we want to try this infostream again
+						logBasic(String.format("Retrying infostream %d, for the %d time", i, data.remainingRowSetRetries));
+						continue;
+					} else {
+						logBasic(String.format("Missing a rowset for %s, continuing", data.infoStreams.get(i).getStepname()));
+					}
+
+				}
+				data.remainingRowSetRetries = 10;
+				data.rowSets.add(data.r);
+				if (data.r == null) {
+					data.stepNames.add("");
+				} else {
+					data.stepNames.add(data.r.getName());
+				}
+				// Avoids race condition. Row metas are not available until the previous steps have called
+				// putRowWait at least once
+				data.iterations = 0;
+				data.completedLoopedPostDoneSignal = false;
+				data.doneSignal = false;
+				while (data.rowMetas[i] == null && data.r != null && !data.completedLoopedPostDoneSignal && !isStopped()) {
+					data.rowMetas[i] = data.r.getRowMeta();
+					data.iterations++;
+					if (data.doneSignal) {
+						// we have completed a loop after the done signal
+						data.completedLoopedPostDoneSignal = true;
+					}
+					if (data.r.isDone()) {
+						// we've received the done signal
+						data.doneSignal = true;
+					}
 					/*
 					 This step blocks until it gets data from all input row sets (or the rowsets say they're done)
 					 This means that you can encounter issues if you split a stream with a filter, do some action
@@ -163,8 +217,31 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 						try {
 							Object [] row = getRow();
 							if (row != null) {
-								data.outStreams.get(getCurrentInputRowSetNr()).writeObject(row);
-								data.inputRowSetNumbers.add(getCurrentInputRowSetNr());
+								/*
+								Calling getRow can wind up removing the rowSet from the list of rowsets.
+								Therefore, we need to store the RowMeta and RowSet Name for the rowsets as they
+								correspond to the infostreams as we get them via getRow. The RowMeta and RowSetName
+								are the ultimate reason we're doing everything up until this point.
+								We need the RowMetas to build the Schema Mapper and we need the RowSet Names's to do
+								lookups later on to determine what mapping scheme to use
+								 */
+								int rowSetNum = getCurrentInputRowSetNr();
+								RowSet curr = getInputRowSets().get(rowSetNum);
+								// todo investigate treatment of step copies
+								int infostreamNum = findInfoStreamPosition(data.infoStreams, curr.getOriginStepName());
+								if (infostreamNum < 0) {
+									throw new KettleException("Unable to find a valid infostream");
+								}
+								data.cacheRowMetaMap.put(infostreamNum, curr.getRowMeta());
+								data.cacheRowSetNameMap.put(infostreamNum, curr.getName());
+
+								/*
+								we need to store row set numbers and row set name for each row so we can reference
+								this info when we pull these rows off to process later
+								 */
+								data.outStreams.get(rowSetNum).writeObject(row);
+								data.inputRowSetNumbers.add(rowSetNum);
+								data.inputRowSetNames.add(curr.getName());
 							} else {
 								logDebug(String.format("Found null at %d", data.inputRowSetNumbers.size()));
 							}
@@ -172,15 +249,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 							throw new KettleException(e.getMessage());
 						}
 					}
-                }
+				}
 
-                if (data.rowMetas[i] != null) {
-                    // indicates this rowset is not sending any rows
-                    data.foundARowMeta = true;
-                }
-                if (isDebug()) {
-                    logDebug("Iterations: " + data.iterations);
-                }
+				if (data.rowMetas[i] != null) {
+					data.foundARowMeta = true;  // indicates at least one rowset is sending rows
+				}
+				if (isDebug()) {
+					logDebug("Iterations: " + data.iterations);
+				}
 			}
 
 			// close output streams and open input streams
@@ -196,32 +272,29 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 				throw new KettleException("Error closing outstreams and opening in streams: " + ex.getMessage());
 			}
 
-            if (!data.foundARowMeta) {
-                // none of the steps are sending rows so indicate we're done
-                setOutputDone();
-                return false;
-            }
+			if (!data.foundARowMeta) {
+				// none of the steps are sending rows so indicate we're done
+				setOutputDone();
+				return false;
+			}
 
+			// set up are mapping structures
 			data.schemaMapping = new SchemaMapper(data.rowMetas);  // creates mapping and master output row
 			data.mapping = data.schemaMapping.getMapping();
 			data.outputRowMeta = data.schemaMapping.getRowMeta();
-            data.convertToString = data.schemaMapping.getConvertToString();
+			data.convertToString = data.schemaMapping.getConvertToString();
 			setInputRowSets(data.rowSets);  // set the order of the inputrowsets to match the order we've defined
-            if (isDetailed()) {
-                logDetailed("Finished generating mapping");
-            }
+			if (isDetailed()) {
+				logDetailed("Finished generating mapping");
+			}
 
 		}
 
-		Object[] incomingRow = null;
+		Object[] incomingRow;
 		if (data.inputRowSetNumbers.size() > 0) {
 			// clear cache before reading rows form rowset again
 			try {
-				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.peek()).readObject();
-//				int num = data.inputRowSetNumbers.peek();
-//				ObjectInputStream stream = data.inStreams.get(num);
-//				Object oj = stream.readObject();
-//				incomingRow = (Object [])oj;
+				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.remove()).readObject();
 			} catch (Exception e) {
 				throw new KettleException("Error reading buffered rows: " + e.getMessage());
 			}
@@ -235,40 +308,45 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-		if (data.inputRowSetNumbers.size() > 0) {
-			// we're reading fromt he cache not the rowset
-			data.currentName = getInputRowSets().get(data.inputRowSetNumbers.remove()).getName();
+		if (data.inputRowSetNames.size() > 0) {
+			// we're reading from the cache not the rowset
+			data.currentName = data.inputRowSetNames.remove();
 		} else {
 			// get the name of the step that the current rowset is coming from
 			data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
 		}
-        // because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
-        // need to use the name to find the proper index for our lookups later
-		for (int i = 0; i < data.stepNames.length; i++) {
-			if (data.stepNames[i] != null && data.stepNames[i].equals(data.currentName)) {
+		// because rowsets are removed from the list of rowsets once they're exhausted (in the getRow() method) we
+		// need to use the name to find the proper index for our lookups later
+		data.streamNum = -1;
+		for (int i = 0; i < data.stepNames.size(); i++) {
+			if (data.stepNames.get(i) != null && data.stepNames.get(i).equals(data.currentName)) {
 				data.streamNum = i;
 				break;
 			}
 		}
-        if (isRowLevel()) {
-            logRowlevel(String.format("Current row from %s. This maps to stream number %d", data.currentName,
-                    data.streamNum));
-        }
+		if (data.streamNum < 0) {
+			throw new KettleException(String.format("Failed to find a matching step name for %s in the stepnames",
+					data.currentName));
+		}
+		if (isRowLevel()) {
+			logRowlevel(String.format("Current row from %s. This maps to stream number %d", data.currentName,
+					data.streamNum));
+		}
 
-        // create a new (empty) output row in the model of the master outputer row
+		// create a new (empty) output row in the model of the master outputer row
 		Object[] outputRow = RowDataUtil.allocateRowData(data.outputRowMeta.size());
 
 		data.rowMapping = data.mapping[data.streamNum];  // set appropriate row mapping
 		data.inRowMeta = data.rowMetas[data.streamNum];  // set appropriate meta for incoming row
 		for (int j = 0; j < data.inRowMeta.size(); j++) {
-            int newPos = data.rowMapping[j];
-            // map a fields old position to its new position
-            if (data.convertToString.contains(newPos) && incomingRow[j] != null) {
-                // we need to convert the underlying data type to string
-                outputRow[newPos] = incomingRow[j].toString();
-            } else {
-                outputRow[newPos] = incomingRow[j];
-            }
+			int newPos = data.rowMapping[j];
+			// map a fields old position to its new position
+			if (data.convertToString.contains(newPos) && incomingRow[j] != null) {
+				// we need to convert the underlying data type to string
+				outputRow[newPos] = incomingRow[j].toString();
+			} else {
+				outputRow[newPos] = incomingRow[j];
+			}
 
 		}
 
@@ -284,28 +362,28 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		return true;
 	}
 
-    /**
-     * Clear steps from step data
-     * @param smi the step meta interface containing the step settings
-     * @param sdi the step data interface that should be used to store
-     */
-    public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
+	/**
+	 * Clear steps from step data
+	 * @param smi the step meta interface containing the step settings
+	 * @param sdi the step data interface that should be used to store
+	 */
+	public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
 
-        // Casting to step-specific implementation classes is safe
-        StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
-        StreamSchemaStepData data = (StreamSchemaStepData) sdi;
+		// Casting to step-specific implementation classes is safe
+		StreamSchemaStepMeta meta = (StreamSchemaStepMeta) smi;
+		StreamSchemaStepData data = (StreamSchemaStepData) sdi;
 
-        data.outputRowMeta = null;
-        data.inRowMeta = null;
-        data.schemaMapping = null;
-        data.infoStreams = null;
-        data.rowSets = null;
-        data.rowMetas = null;
-        data.mapping = null;
-        data.currentName = null;
-        data.rowMapping = null;
-        data.stepNames = null;
-        data.r = null;
+		data.outputRowMeta = null;
+		data.inRowMeta = null;
+		data.schemaMapping = null;
+		data.infoStreams = null;
+		data.rowSets = null;
+		data.rowMetas = null;
+		data.mapping = null;
+		data.currentName = null;
+		data.rowMapping = null;
+		data.stepNames = null;
+		data.r = null;
 		data.inputRowSetNumbers = null;
 		data.outStreams = null;
 		for (ObjectInputStream is: data.inStreams) {
@@ -315,11 +393,18 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 				logBasic("Hit exception when cleaning up: " + e.getMessage());
 			}
 		}
+		for (FileObject obj : data.files) {
+			try {
+				obj.delete();
+			} catch (FileSystemException e) {
+				logBasic(String.format("Unable to delete file %s because %s", obj.getName(), e.getMessage()));
+			}
+		}
 		data.outStreams = null;
 		data.files = null;
 
 
-        super.dispose(meta, data);
-    }
+		super.dispose(meta, data);
+	}
 
 }
