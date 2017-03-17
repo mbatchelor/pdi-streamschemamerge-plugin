@@ -38,6 +38,8 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -95,18 +97,30 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.rowMetas = new RowMetaInterface[data.numSteps];
 		data.rowSets = new ArrayList<RowSet>();
 		data.stepNames = new ArrayList<String>(data.numSteps);
-		data.inputRowSetNumbers = new LinkedList<Integer>();
+
 		data.files = new LinkedList<FileObject>();
 		data.outStreams = new ArrayList<ObjectOutputStream>(data.infoStreams.size());
 		data.inStreams = new ArrayList<ObjectInputStream>(data.infoStreams.size());
-		data.inputRowSetNames = new LinkedList<String>();
+		try {
+			data.inputRowSetFileObj = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
+			data.inputRowSetNumbersOut = new BufferedOutputStream(KettleVFS.getOutputStream(data.inputRowSetFileObj, false), data.BUFFER_SIZE);
+
+			data.inputRowSetNamesFileObj = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
+			data.inputRowSetNamesOut = new ObjectOutputStream(new BufferedOutputStream(KettleVFS.getOutputStream(data.inputRowSetNamesFileObj, false), data.BUFFER_SIZE));
+			data.closedCacheFiles = false;
+		} catch (Exception e) {
+			logError("Unable to create file object");
+			return false;
+		}
+
+		data.numBufferedRows = 0;
 		data.cacheRowMetaMap = new HashMap<Integer, RowMetaInterface>();
 		data.cacheRowSetNameMap = new HashMap<Integer, String>();
 		for (int i = 0; i < data.infoStreams.size(); i++) {
 			try {
 				FileObject fileObject = KettleVFS.createTempFile("streamschema", ".tmp", System.getProperty("java.io.tmpdir"), getTransMeta());
 				data.files.add(fileObject);
-				ObjectOutputStream outputStream = new ObjectOutputStream(KettleVFS.getOutputStream(fileObject, false));
+				ObjectOutputStream outputStream = new ObjectOutputStream(new BufferedOutputStream(KettleVFS.getOutputStream(fileObject, false), data.BUFFER_SIZE));
 				data.outStreams.add(outputStream);
 			} catch (Exception e) {
 				logError("Unable to create file object");
@@ -240,10 +254,12 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 								this info when we pull these rows off to process later
 								 */
 								data.outStreams.get(rowSetNum).writeObject(row);
-								data.inputRowSetNumbers.add(rowSetNum);
-								data.inputRowSetNames.add(curr.getName());
+								data.inputRowSetNumbersOut.write(rowSetNum);
+								data.inputRowSetNamesOut.writeUTF(curr.getName());
+								data.numBufferedRows++;
+								incrementLinesOutput();  // tells us we wrote to cache
 							} else {
-								logDebug(String.format("Found null at %d", data.inputRowSetNumbers.size()));
+								logDebug(String.format("Found null at %d", data.numBufferedRows));
 							}
 						} catch (IOException e) {
 							throw new KettleException(e.getMessage());
@@ -265,9 +281,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 					os.close();
 				}
 				for (int index = 0; index < data.files.size(); index++) {
-					data.inStreams.add(new ObjectInputStream(KettleVFS.getInputStream(data.files.get(index))));
+					data.inStreams.add(new ObjectInputStream(new BufferedInputStream(KettleVFS.getInputStream(data.files.get(index)), data.BUFFER_SIZE)));
 				}
-				logDebug("Buffered rows: " + data.inputRowSetNumbers.size());
+				logDebug("Buffered rows: " + data.numBufferedRows);
 			} catch (IOException ex) {
 				throw new KettleException("Error closing outstreams and opening in streams: " + ex.getMessage());
 			}
@@ -290,11 +306,25 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 
 		}
 
+		if (!data.closedCacheFiles) {
+			try {
+				data.inputRowSetNumbersOut.close();
+				data.inputRowSetNamesOut.close();
+
+				data.inputRowSetNumbersIn = new BufferedInputStream(KettleVFS.getInputStream(data.inputRowSetFileObj), data.BUFFER_SIZE);
+				data.inputRowSetNamesIn = new ObjectInputStream(new BufferedInputStream(KettleVFS.getInputStream(data.inputRowSetNamesFileObj), data.BUFFER_SIZE));
+				data.closedCacheFiles = true;
+			} catch (IOException ex) {
+				throw new KettleException(ex.getMessage());
+			}
+		}
+
 		Object[] incomingRow;
-		if (data.inputRowSetNumbers.size() > 0) {
+		if (data.numBufferedRows > 0) {
 			// clear cache before reading rows form rowset again
 			try {
-				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbers.remove()).readObject();
+				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbersIn.read()).readObject();
+				// we decrement numBufferedRows below (since we check its value twice per iteration)
 			} catch (Exception e) {
 				throw new KettleException("Error reading buffered rows: " + e.getMessage());
 			}
@@ -308,9 +338,16 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			return false;
 		}
 
-		if (data.inputRowSetNames.size() > 0) {
+		if (data.numBufferedRows > 0) {
 			// we're reading from the cache not the rowset
-			data.currentName = data.inputRowSetNames.remove();
+			try {
+				data.currentName = data.inputRowSetNamesIn.readUTF();
+				// we decrement numBufferedRows below (since we check its value twice per iteration)
+			} catch (Exception e) {
+				throw new KettleException("Error reading buffered rows: " + e.getMessage());
+			}
+			data.numBufferedRows--;
+			incrementLinesInput(); // tells us we read from the cache
 		} else {
 			// get the name of the step that the current rowset is coming from
 			data.currentName = getInputRowSets().get(getCurrentInputRowSetNr()).getName();
@@ -384,7 +421,6 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		data.rowMapping = null;
 		data.stepNames = null;
 		data.r = null;
-		data.inputRowSetNumbers = null;
 		data.outStreams = null;
 		for (ObjectInputStream is: data.inStreams) {
 			try {
@@ -399,6 +435,36 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			} catch (FileSystemException e) {
 				logBasic(String.format("Unable to delete file %s because %s", obj.getName(), e.getMessage()));
 			}
+		}
+		try {
+			if (!data.closedCacheFiles) {
+				data.inputRowSetNumbersOut.close();
+			}
+			data.inputRowSetNumbersOut = null;
+		} catch (IOException ex) {
+			logError("Error when cleaning up rowset cache" + ex.getMessage());
+		}
+		try {
+			data.inputRowSetNumbersIn.close();
+			data.inputRowSetNumbersIn = null;
+			data.inputRowSetFileObj = null;
+		} catch (IOException ex) {
+			logError("Error when cleaning up rowset cache" + ex.getMessage());
+		}
+		try {
+			if (!data.closedCacheFiles) {
+				data.inputRowSetNamesOut.close();
+			}
+			data.inputRowSetNamesOut = null;
+		} catch (IOException ex) {
+			logError("Error when cleaning up rowset cache" + ex.getMessage());
+		}
+		try {
+			data.inputRowSetNamesIn.close();
+			data.inputRowSetNamesIn = null;
+			data.inputRowSetNamesFileObj = null;
+		} catch (IOException ex) {
+			logError("Error when cleaning up rowset cache" + ex.getMessage());
 		}
 		data.outStreams = null;
 		data.files = null;

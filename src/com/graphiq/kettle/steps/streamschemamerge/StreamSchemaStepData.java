@@ -30,8 +30,13 @@ import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.math.BigInteger;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -75,9 +80,19 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
     public Set<Integer> convertToString; // used when we have to resolve data type mismatches
 
-	public LinkedList<Integer> inputRowSetNumbers;  // row set numbers for the rows written to disk
+	public BufferedOutputStream inputRowSetNumbersOut;  // row set numbers for the rows written to disk
+	public BufferedInputStream inputRowSetNumbersIn;  // row set numbers for the rows written to disk
 
-	public LinkedList<String> inputRowSetNames;  // row set names for rows written to disk
+	public FileObject inputRowSetFileObj;
+
+	public ObjectOutputStream inputRowSetNamesOut;  // row set names for rows written to disk
+	public ObjectInputStream inputRowSetNamesIn;  // row set names for rows written to disk
+
+	public FileObject inputRowSetNamesFileObj;
+
+	public boolean closedCacheFiles; // used to see if we've closed inputRowSetNumbersOut and inputRowSetNamesOut
+
+	public long numBufferedRows;
 
 	public int ACCUMULATION_TRIGGER = 100000;  // the number of iterations before we decide to start writing rows to disk (to prevent blocking)
 
@@ -96,6 +111,8 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 	public boolean doneSignal = false;  // we can have an infinite loop if a step isn't sending any rows
 
 	public int remainingRowSetRetries = 10;
+
+	public final int BUFFER_SIZE = 67108864;
 
 }
 	
