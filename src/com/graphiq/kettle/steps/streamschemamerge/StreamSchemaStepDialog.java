@@ -262,14 +262,13 @@ public class StreamSchemaStepDialog extends BaseStepDialog implements StepDialog
         if ( meta.getNumberOfSteps() > 0 ) {
             table.removeAll();
         }
-        String[] stepNames = meta.getStepsToMerge();
-        for ( int i = 0; i < stepNames.length; i++ ) {
-            TableItem ti = new TableItem( table, SWT.NONE );
-            ti.setText( 0, "" + ( i + 1 ) );
-            if ( stepNames[i] != null ) {
-                ti.setText( 1, stepNames[i] );
-            }
-        }
+        int i = 0;
+        for(StreamInterface infoStream : meta.getStepIOMeta().getInfoStreams()) {
+			TableItem ti = new TableItem( table, SWT.NONE );
+			ti.setText( 0, "" + ( i + 1 ) );
+			ti.setText( 1, Const.NVL( infoStream.getStepname(), "" ) );
+            i++;
+		}
 
         wSteps.removeEmptyRows();
         wSteps.setRowNums();

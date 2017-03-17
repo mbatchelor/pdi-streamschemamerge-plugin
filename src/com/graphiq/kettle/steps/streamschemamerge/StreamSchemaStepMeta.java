@@ -195,10 +195,10 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
 	public String getXML() throws KettleValueException {
 		StringBuilder xml = new StringBuilder();
         xml.append( "    <steps>" + Const.CR );
-        for (String stepName : stepsToMerge) {
+        for (StreamInterface infoStream : getStepIOMeta().getInfoStreams()) {
             xml.append( "      <step>" + Const.CR );
-            xml.append( "        " + XMLHandler.addTagValue( "name", stepName ) );
-            xml.append( "        </step>" + Const.CR );
+            xml.append( "        " + XMLHandler.addTagValue( "name", infoStream.getStepname() ) );
+            xml.append( "      </step>" + Const.CR );
         }
         xml.append("      </steps>" + Const.CR);
 		return xml.toString();
