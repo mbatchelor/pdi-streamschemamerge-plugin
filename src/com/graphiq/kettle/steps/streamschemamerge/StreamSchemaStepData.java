@@ -112,7 +112,7 @@ public class StreamSchemaStepData extends BaseStepData implements StepDataInterf
 
 	public int remainingRowSetRetries = 10;
 
-	public final int BUFFER_SIZE = 67108864;
+	public final int BUFFER_SIZE = 8388608;
 
 }
 	

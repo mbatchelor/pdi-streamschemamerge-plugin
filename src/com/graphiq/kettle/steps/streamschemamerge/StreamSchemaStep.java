@@ -229,7 +229,7 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 					 */
 					if (data.iterations > data.ACCUMULATION_TRIGGER) {
 						try {
-							Object [] row = getRow();
+							Object[] row = getRow();
 							if (row != null) {
 								/*
 								Calling getRow can wind up removing the rowSet from the list of rowsets.
@@ -254,6 +254,14 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 								this info when we pull these rows off to process later
 								 */
 								data.outStreams.get(rowSetNum).writeObject(row);
+								data.outStreams.get(rowSetNum).flush();
+								if (data.iterations % 5000 == 0) {
+									// fix for memory leak bug https://bugs.graphiq.com/view.php?id=34255
+									// explanation of memory leak here http://wordpress.nejaa-den.com/outofmemoryexception-memory-leak-in-the-java-class-objectoutputstream-and-objectinputstream/#comment-12234
+									for (ObjectOutputStream s : data.outStreams) {
+										s.reset();
+									}
+								}
 								data.inputRowSetNumbersOut.write(rowSetNum);
 								data.inputRowSetNamesOut.writeUTF(curr.getName());
 								data.numBufferedRows++;
@@ -323,7 +331,8 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 		if (data.numBufferedRows > 0) {
 			// clear cache before reading rows form rowset again
 			try {
-				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbersIn.read()).readObject();
+				// readUnsahred used instead of readObject to prevent memory leak
+				incomingRow = (Object []) data.inStreams.get(data.inputRowSetNumbersIn.read()).readUnshared();
 				// we decrement numBufferedRows below (since we check its value twice per iteration)
 			} catch (Exception e) {
 				throw new KettleException("Error reading buffered rows: " + e.getMessage());
@@ -445,7 +454,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			logError("Error when cleaning up rowset cache" + ex.getMessage());
 		}
 		try {
-			data.inputRowSetNumbersIn.close();
+			if (data.inputRowSetNumbersIn != null) {
+				data.inputRowSetNumbersIn.close();
+			}
 			data.inputRowSetNumbersIn = null;
 			data.inputRowSetFileObj = null;
 		} catch (IOException ex) {
@@ -460,7 +471,9 @@ public class StreamSchemaStep extends BaseStep implements StepInterface {
 			logError("Error when cleaning up rowset cache" + ex.getMessage());
 		}
 		try {
-			data.inputRowSetNamesIn.close();
+			if (data.inputRowSetNumbersIn != null) {
+				data.inputRowSetNamesIn.close();
+			}
 			data.inputRowSetNamesIn = null;
 			data.inputRowSetNamesFileObj = null;
 		} catch (IOException ex) {
