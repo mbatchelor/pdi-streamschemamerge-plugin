@@ -24,7 +24,6 @@ package com.graphiq.kettle.steps.streamschemamerge;
 
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.RowSet;
-import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;
@@ -32,12 +31,8 @@ import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.math.BigInteger;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
