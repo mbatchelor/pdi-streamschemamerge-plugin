@@ -437,8 +437,8 @@
     <notepad>
       <note>This transformation merges the schema, NOT the rows. 
 Run it and observe the 'index' column not merging two rows with the same index.</note>
-      <xloc>304</xloc>
-      <yloc>112</yloc>
+      <xloc>192</xloc>
+      <yloc>48</yloc>
       <width>547</width>
       <heigth>50</heigth>
       <fontname>Segoe UI</fontname>
@@ -498,8 +498,8 @@ Run it and observe the 'index' column not merging two rows with the same index.<
       </output>
     </remotesteps>
     <GUI>
-      <xloc>784</xloc>
-      <yloc>240</yloc>
+      <xloc>672</xloc>
+      <yloc>176</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -553,8 +553,8 @@ Run it and observe the 'index' column not merging two rows with the same index.<
       </output>
     </remotesteps>
     <GUI>
-      <xloc>160</xloc>
-      <yloc>112</yloc>
+      <xloc>48</xloc>
+      <yloc>48</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -608,8 +608,8 @@ Run it and observe the 'index' column not merging two rows with the same index.<
       </output>
     </remotesteps>
     <GUI>
-      <xloc>160</xloc>
-      <yloc>240</yloc>
+      <xloc>48</xloc>
+      <yloc>176</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -663,8 +663,8 @@ Run it and observe the 'index' column not merging two rows with the same index.<
       </output>
     </remotesteps>
     <GUI>
-      <xloc>160</xloc>
-      <yloc>368</yloc>
+      <xloc>48</xloc>
+      <yloc>304</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -698,8 +698,8 @@ Run it and observe the 'index' column not merging two rows with the same index.<
       </output>
     </remotesteps>
     <GUI>
-      <xloc>400</xloc>
-      <yloc>240</yloc>
+      <xloc>288</xloc>
+      <yloc>176</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
