@@ -50,7 +50,7 @@ Sample transforms are available in the ZIP release, within the samples folder.
 
 ## License and Copyright
 
-All material in this repository are Copyright 2002-2018 Hitachi Vantara. All code is licensed as Apache 2.0 unless explicitly stated. See the LICENSE file for more details.
+All material in this repository are Copyright 2002-2018 Hitachi Vantara. All code is licensed as Apache 2.0 unless explicitly stated. See the LICENSE file for more details. Note: The original repository's code was marked as Apache 2 even though the project was marked MIT. I have therefore corrected the LICENSE file to be Apache 2.0, just like all code with LICENSE statements.
 
 ## Support Statement
 
