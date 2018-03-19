@@ -16,3 +16,4 @@ workspace.xml
 tasks.xml
 
 target
+bin
