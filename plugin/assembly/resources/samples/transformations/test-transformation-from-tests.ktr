@@ -430,10 +430,32 @@
     <created_date>2018/03/19 07:29:19.607</created_date>
     <modified_user>-</modified_user>
     <modified_date>2018/03/19 07:29:19.607</modified_date>
-    <key_for_session_key/>
+    <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
     <is_key_private>N</is_key_private>
   </info>
   <notepads>
+    <notepad>
+      <note>This transformation merges the schema, NOT the rows. 
+Run it and observe the 'index' column not merging two rows with the same index.</note>
+      <xloc>304</xloc>
+      <yloc>112</yloc>
+      <width>547</width>
+      <heigth>50</heigth>
+      <fontname>Segoe UI</fontname>
+      <fontsize>9</fontsize>
+      <fontbold>N</fontbold>
+      <fontitalic>N</fontitalic>
+      <fontcolorred>0</fontcolorred>
+      <fontcolorgreen>0</fontcolorgreen>
+      <fontcolorblue>0</fontcolorblue>
+      <backgroundcolorred>255</backgroundcolorred>
+      <backgroundcolorgreen>205</backgroundcolorgreen>
+      <backgroundcolorblue>112</backgroundcolorblue>
+      <bordercolorred>100</bordercolorred>
+      <bordercolorgreen>100</bordercolorgreen>
+      <bordercolorblue>100</bordercolorblue>
+      <drawshadow>Y</drawshadow>
+    </notepad>
   </notepads>
   <order>
     <hop>
@@ -457,41 +479,6 @@
       <enabled>Y</enabled>
     </hop>
   </order>
-  <step>
-    <name>Stream Schema Merge</name>
-    <type>StreamSchemaStep</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <steps>
-      <step>
-        <name>Generate Rows</name>
-      </step>
-      <step>
-        <name>Generate Rows 2</name>
-      </step>
-      <step>
-        <name>Generate Rows 3</name>
-      </step>
-    </steps>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>400</xloc>
-      <yloc>240</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
   <step>
     <name>Dummy (do nothing)</name>
     <type>Dummy</type>
@@ -528,6 +515,18 @@
       <schema_name/>
     </partitioning>
     <fields>
+      <field>
+        <name>index</name>
+        <type>Integer</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>5</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+        <set_empty_string>N</set_empty_string>
+      </field>
       <field>
         <name>hov</name>
         <type>Number</type>
@@ -572,6 +571,18 @@
     </partitioning>
     <fields>
       <field>
+        <name>index</name>
+        <type>Integer</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>5</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+        <set_empty_string>N</set_empty_string>
+      </field>
+      <field>
         <name>guava</name>
         <type>Number</type>
         <format/>
@@ -614,6 +625,30 @@
       <schema_name/>
     </partitioning>
     <fields>
+      <field>
+        <name>index</name>
+        <type>Integer</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>10</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+        <set_empty_string>N</set_empty_string>
+      </field>
+      <field>
+        <name>wibble</name>
+        <type>String</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>Flibble</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+        <set_empty_string>N</set_empty_string>
+      </field>
     </fields>
     <limit>1</limit>
     <never_ending>N</never_ending>
@@ -630,6 +665,41 @@
     <GUI>
       <xloc>160</xloc>
       <yloc>368</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Stream Schema Merge</name>
+    <type>StreamSchemaStep</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <steps>
+      <step>
+        <name>Generate Rows</name>
+      </step>
+      <step>
+        <name>Generate Rows 2</name>
+      </step>
+      <step>
+        <name>Generate Rows 3</name>
+      </step>
+    </steps>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>400</xloc>
+      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
