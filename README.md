@@ -30,27 +30,28 @@ If a stream did not originally contain a column (e.g. mango isn't in stream 1), 
 + This step is not compatible with the "enable safe mode" option that is available when running transformations through spoon. This option will be automatically disabled when you run a transformation containing this step
 + If 2 streams contain the same field, but they have different data meta types, the data meta type of the field in the resulting stream will be String
 
-## Development
-### Build
-To build (requires Apache Ant and Apache Ivy)
-```bash
-# from the project root
-ant resolve  # resolves dependencies
-ant -f build/build.xml dist  # compiles project
-```
-### Install
-1. Update the value for `kettle-dir` in `build/build.properties` to point to your `data-integration` folder
-2. Run the ant install task (once again from project root)
+## Installation
 
-```bash
-ant -f build/build.xml install  # compiles project and installs plugin
-```
-### Testing
-Use the following command to run functional tests
+Easiest way is to download the binary release.
 
-```
-ant -f build/build.xml test  # run tests
-```
+- Fetch the latest release from here: https://github.com/Pentaho-SE-EMEA-APAC/pdi-streamschemamerge-plugin/releases 
+- Unzip the zip file
+- Take the 'pdi-streamschema-merge' folder and drop in to PENTAHO_HOME/design-tools/data-integration/plugins
+- Restart PDI/Spoon
+- You will find the Stream Schema Merge step under the 'Flow' folder
+
+## Samples
+
+Sample transforms are available in the ZIP release, within the samples folder.
 
 ## Authors
-+ [Andrew Overton](https://team.graphiq.com/l/232/Andrew-Overton) - aoverton at graphiq dot com
++ [Andrew Overton](https://team.graphiq.com/l/232/Andrew-Overton) - aoverton at graphiq dot com (Original author)
++ [Adam Fowler](https://github.com/adamfowleruk) - adam dot fowler at hitachi vantara dot com (Updated for PDI 8.0 and Maven)
+
+## License and Copyright
+
+All material in this repository are Copyright 2002-2018 Hitachi Vantara. All code is licensed as Apache 2.0 unless explicitly stated. See the LICENSE file for more details.
+
+## Support Statement
+
+This work is at Stage 1 : Development Phase: Start-up phase of an internal project. Usually a Labs experiment. (Unsupported)
