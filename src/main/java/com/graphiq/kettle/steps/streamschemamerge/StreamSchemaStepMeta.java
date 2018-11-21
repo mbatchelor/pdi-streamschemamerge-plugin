@@ -2,7 +2,7 @@
 *
 * Pentaho Data Integration
 *
-* Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+* Copyright (C) 2002-2018 by Pentaho : http://www.pentaho.com
 *
 *******************************************************************************
 *
@@ -378,7 +378,7 @@ public class StreamSchemaStepMeta extends BaseStepMeta implements StepMetaInterf
      * Has original function of resetStepIoMeta, but we only want to call it when appropriate
      */
 	public void wipeStepIoMeta() {
-		ioMeta = null;
+		super.resetStepIoMeta();
 	}
 
 
